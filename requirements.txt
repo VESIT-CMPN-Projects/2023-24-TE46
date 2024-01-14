@@ -1,0 +1,8 @@
+opencv-python
+numpy
+python-math==0.0.1
+torch==2.0.1
+Pillow
+ultralytics==8.0.124
+pandas
+matplotlib
