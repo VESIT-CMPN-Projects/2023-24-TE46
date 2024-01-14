@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Large Hadron Collider (LHC) at CERN is the largest and most powerful particle accelerator. It accelerates protons to nearly the velocity of light and collides them at four locations around its ring. At one of its four collision points, CMS Detector acts as a giant, high-speed camera, taking 3D “photographs” of particle collisions from all directions up to 40 million times each second. For the High-Granularity Calorimeter in CMS, a sizable number of sensor modules are built across labs all around the world. In doing so, every sensor module goes through around 700 checkpoints for visual inspection. In place of the traditional methods of assessment involving manual intervention, we suggest a Quality Assurance framework analyzing components of sensor modules across various stages of assembly using deep learning-based computer vision techniques to automatically find manufacturing flaws when evaluating a large number of modules in order to more appropriately assess the checkpoints and increase the efficiency for production of sensor modules.
+The Large Hadron Collider (LHC) at CERN is the largest and most powerful particle accelerator. It accelerates protons to nearly the velocity of light and collides them at four locations around its ring. At one of its four collision points, CMS Detector acts as a giant, high-speed camera, taking 3D “photographs” of particle collisions from all directions up to 40 million times each second. For the High-Granularity Calorimeter in CMS, a sizable number of sensor modules are built across labs all around the world. In doing so, every sensor module goes through around 700 checkpoints for visual inspection. In place of the traditional methods of assessment involving manual intervention, we suggest a Quality Assurance framework analyzing components of sensor modules across various stages of assembly using deep learning-based computer vision techniques to automatically find manufacturing flaws when evaluating a large number of modules to more appropriately assess the checkpoints and increase the efficiency for production of sensor modules.
 
 ## Installing the application
 
@@ -15,7 +15,6 @@ Follow the below steps to install and run the application:
 1. Download the ZIP file of the code from the following links. GitHub Link for Application:
    [https://github.com/GerraAyush/Quality-Assurance.git](url)
 2. Extract the downloaded ZIP file.
-3. Place the extracted [Conventionally_named_holes](https://drive.google.com/drive/folders/1dYpEKhDH9DTbHPbgQJ2BnFvOi_h1LX48?usp=drive_link) and [Conventionally_named_holes_ctrs](https://drive.google.com/drive/folders/136ozW7ilTo10eeKNC4o7ohzxLljBJHAt?usp=drive_link) folders from Google Drive into the outs directory of the Application.
 4. Open a terminal window.
 5. Install Python Virtual Environment if not installed already.
     ```
@@ -43,6 +42,9 @@ Follow the below steps to install and run the application:
 11. Navigate to the src directory.
 12. Launch the application by executing the following command in the src directory.
     ```
-    python3 VideoUI.py
+    python3 app.py
     ```
 13. When you run the above code you will see a GUI.
+
+## TODO
+- [] Avoid detection of holes and area evaluation for an image if already done
