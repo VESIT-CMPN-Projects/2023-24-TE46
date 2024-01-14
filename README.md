@@ -15,33 +15,34 @@ Follow the below steps to install and run the application:
 1. Download the ZIP file of the code from the following links. GitHub Link for Final Integrated Application:
    [https://github.com/GerraAyush/Quality-Assurance.git](url)
 2. Extract the downloaded ZIP file.
-3. Open a terminal window.
-4. Install Python Virtual Environment if not installed already.
+3. Place the Conventionally_named_holes and Conventionally_named_holes_ctrs folders into the outs directory of the extracted folder.
+4. Open a terminal window.
+5. Install Python Virtual Environment if not installed already.
     ```
     py -m pip install --user virtualenv
     ```
-5. Create a virtual environment for the project.
+6. Create a virtual environment for the project.
     ```
     py -m venv venv
     ```
-6. Activate the virtual environment.
+7. Activate the virtual environment.
     ```
     .\venv\Scripts\activate
     ```
-7. Your command prompt will now be prefixed with the name of your environment, in this case, it is called venv.
+8. Your command prompt will now be prefixed with the name of your environment, in this case, it is called venv.
     ```
     Example:
     (combine) PS E:\TIFR Project>
     ```
-8. Navigate to the directory where the application has been cloned.
-9. Run the following command to install all requirements:
+9. Navigate to the directory where the application has been cloned.
+10. Run the following command to install all requirements:
     ```
     python.exe -m pip install --upgrade pip
     pip install -r requirements.txt
     ```
-10. Navigate to the src directory.
-11. Launch the application by executing the following command in the src directory.
+11. Navigate to the src directory.
+12. Launch the application by executing the following command in the src directory.
     ```
     python3 VideoUI.py
     ```
-12. When you run the above code you will see a GUI.
+13. When you run the above code you will see a GUI.
