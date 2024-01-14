@@ -36,12 +36,12 @@ Follow the below steps to install and run the application:
 8. Navigate to the directory where the application has been cloned.
 9. Run the following command to install all requirements:
     ```
-    $ python.exe -m pip install --upgrade pip
-    $ pip install -r requirements.txt
+    python.exe -m pip install --upgrade pip
+    pip install -r requirements.txt
     ```
 10. Navigate to the src directory.
 11. Launch the application by executing the following command in the src directory.
     ```
-    $  python3 VideoUI.py
+    python3 VideoUI.py
     ```
 12. When you run the above code you will see a GUI.
