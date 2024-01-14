@@ -1,10 +1,6 @@
 # created by virtualenv automatically
-./outs/Debug
-./outs/Conventionally_named_holes/*
-./outs/Conventionally_named_holes_ctrs/*
-./outs/All_Names.png
-
-Scripts
-share
-Lib
-pyvenv.cfg
+outs/Debug
+outs/Conventionally_named_holes
+outs/Conventionally_named_holes_ctrs
+outs/All_Names.png
+venv
