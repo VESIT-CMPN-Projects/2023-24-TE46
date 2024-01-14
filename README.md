@@ -15,7 +15,7 @@ Follow the below steps to install and run the application:
 1. Download the ZIP file of the code from the following links. GitHub Link for Application:
    [https://github.com/GerraAyush/Quality-Assurance.git](url)
 2. Extract the downloaded ZIP file.
-3. Place the extracted [https://drive.google.com/drive/folders/1dYpEKhDH9DTbHPbgQJ2BnFvOi_h1LX48?usp=drive_link](Conventionally_named_holes) and [https://drive.google.com/drive/folders/136ozW7ilTo10eeKNC4o7ohzxLljBJHAt?usp=drive_link](Conventionally_named_holes_ctrs) folders from Google Drive into the outs directory of the Application.
+3. Place the extracted [Conventionally_named_holes](https://drive.google.com/drive/folders/1dYpEKhDH9DTbHPbgQJ2BnFvOi_h1LX48?usp=drive_link) and [Conventionally_named_holes_ctrs](https://drive.google.com/drive/folders/136ozW7ilTo10eeKNC4o7ohzxLljBJHAt?usp=drive_link) folders from Google Drive into the outs directory of the Application.
 4. Open a terminal window.
 5. Install Python Virtual Environment if not installed already.
     ```
