@@ -6,3 +6,4 @@ Pillow
 ultralytics==8.0.124
 pandas
 matplotlib
+tk==0.1.0

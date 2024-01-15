@@ -133,16 +133,6 @@ class AppGUI(tk.Tk):
         [btn.grid(row=0, column=index if index == 0 else index + 1) for (index, btn) in enumerate(self.imc_btns)]
         self.lbl_image["width"]=300
         self.lbl_image["height"]=400
-        
-        try:
-            os.mkdir(self.paths[0])
-        except Exception as err:
-            print(err)
-
-        try:
-            os.mkdir(self.paths[1])
-        except Exception as err:
-            print(err)
 
         im_path = self.main_im_path.get()
         Extractor(self.main_im, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path)
@@ -164,10 +154,10 @@ class AppGUI(tk.Tk):
 
 
     def update_stage(self):
-        self.update_names()
-        self.lbl_stage['text'] = f'Stage {self.stage}'
-        self.update_img()
         self.update_controls()
+        self.lbl_stage['text'] = f'Stage {self.stage}'
+        self.update_names()
+        self.update_img()
 
 
     def update_img(self, *args):
@@ -175,6 +165,16 @@ class AppGUI(tk.Tk):
             im_path = self.main_im_path.get()
             self.relpath = os.path.abspath(os.path.relpath(self.outs))
             self.paths = [os.path.join(self.relpath, im_path.split('.')[0]), os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
+                    
+            try:
+                os.mkdir(self.paths[0])
+            except Exception as err:
+                print(err)
+
+            try:
+                os.mkdir(self.paths[1])
+            except Exception as err:
+                print(err)
 
             path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), im_path)
 
