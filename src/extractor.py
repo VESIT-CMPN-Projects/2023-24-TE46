@@ -221,7 +221,7 @@ class Extractor:
 
             rgb_img = cv2.cvtColor(box_vis, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(rgb_img)
-            pil_img.save(os.path.join(self.outs, self.paths[1], image_path.split("\\")[-1]), dpi=(DPI, DPI))
+            pil_img.save(os.path.join(self.outs, self.paths[1], os.path.basename(image_path)), dpi=(DPI, DPI))
 
             [classes.append(x) for x in test_list if x not in classes]
 
