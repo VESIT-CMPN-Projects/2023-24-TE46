@@ -21,6 +21,9 @@ class Extractor:
         # converting rgb to bgr
         img = np.flip(img, axis=-1)
 
+        if img.shape[0] < img.shape[1]:
+            img = self.get_vertical_board(img, DPI)
+
         cropped_img = self.focus_board(img, DPI)
         rotated_img = self.rotate_image(cropped_img, DPI)
 
@@ -34,6 +37,26 @@ class Extractor:
 
         self.get_vid(self.paths[1], "video--s.avi")
 
+
+    def get_vertical_board(self, img, DPI):
+        resize_img = cv2.resize(img, (int(img.shape[1] // DPI * 600), int(img.shape[0] // DPI * 600)), interpolation=cv2.INTER_AREA)
+
+        left_strip = cv2.cvtColor(resize_img[:, : 600].copy(), cv2.COLOR_BGR2GRAY)
+        
+        circles_left = cv2.HoughCircles(left_strip, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=29)
+        circles_left = np.int32(circles_left[0])
+
+        left_strip_res = left_strip.copy()
+        for cir in circles_left:
+            cv2.circle(left_strip_res, (cir[0], cir[1]), cir[2], (255, 255, 255), 10)
+
+        left_count = len(circles_left[np.where((circles_left[:, 1] < 600) | (circles_left[:, 1] > resize_img.shape[0] - 600))])
+
+        if left_count == 1:
+            img = np.transpose(img, (1, 0, 2))[:, ::-1, :]
+        else:
+            img = np.transpose(img, (1, 0, 2))[::-1, ::-1, :]
+        return img
 
     def focus_board(self, image, DPI, /, threshold=50, chips=[100, 100], filename='Cropped.jpg'):
         if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):
@@ -51,7 +74,7 @@ class Extractor:
 
         mask = np.where(resized_img[:, :, :] < 80, ones, zeroes)
         mask = cv2.bilateralFilter(mask, d=9, sigmaColor=80, sigmaSpace=125)
-        mask = np.where((mask[:, :, 0] == 255) & (mask[:, :, 1] <= 5) & (mask[:, :, 2] == 255), p_ones, p_zeroes)
+        mask = np.where((mask[:, :, 0] == 255) & (mask[:, :, 1] == 255) & (mask[:, :, 2] == 255), p_ones, p_zeroes)
 
         rows = np.where(np.count_nonzero(mask, 1) >= threshold)[0]
         cols = np.where(np.count_nonzero(mask, 0) >= threshold)[0]
@@ -69,16 +92,16 @@ class Extractor:
         resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
 
         # We know image is 600DPI after resizing, thus getting the window in a static way
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : resized_img.shape[0] - 300, :], cv2.COLOR_BGR2GRAY)
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : , :], cv2.COLOR_BGR2GRAY)
 
-        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=10, param2=34, minRadius=22, maxRadius=29)
+        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=31)
 
         holes = np.int64(circles)
         holes = np.flip(holes[0, np.argsort(holes[:, :, 1])[0]], axis=0)
 
         for hole in holes:
             cv2.circle(window, (hole[0], hole[1]), 22, (255, 255, 255), -1)
-        plt.imshow(window)
+        # plt.imshow(window)
 
         if (holes[0][0] < holes[1][0]):
             y2_minus_y1 = holes[0][1] - holes[1][1]
@@ -105,15 +128,15 @@ class Extractor:
         resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
 
         # getting the window for rotation-angle measurement
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : resized_img.shape[0] - 470, :], cv2.COLOR_BGR2GRAY)
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : resized_img.shape[0] - 400, :], cv2.COLOR_BGR2GRAY)
 
-        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=29)
+        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=31)
 
         holes = np.int64(circles)
         holes = np.flip(holes[0, np.argsort(holes[:, :, 1])[0]], axis=0)
         for hole in holes:
             cv2.circle(window, (hole[0], hole[1]), 22, (255, 255, 255), -1)
-        plt.imshow(window)
+        # plt.imshow(window)
 
         ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 700) * factor]
 
@@ -155,8 +178,8 @@ class Extractor:
         factor = image_DPI // 600
         x_offset, y_offset = np.array(offset) * factor
 
-        fontScales = [0.5, 0.6, 0, 0.7, 0, 0, 0, 0.8]
-        thicks = [1, 2, 0, 2, 0, 0, 0, 3]
+        fontScales = [0.5, 0.6, 0, 0.7, 0.7, 0, 0, 0.8]
+        thicks = [1, 2, 0, 2, 2, 0, 0, 3]
 
         try:
             strip = (np.ones((25 * factor, 2 * x_offset, 3)) * 255).astype('uint8')

@@ -1,5 +1,5 @@
 # created by virtualenv automatically
 outs
 venv
-src_v1.0
+src_v1.*
 __pycache__
