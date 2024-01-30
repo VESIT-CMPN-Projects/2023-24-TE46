@@ -7,15 +7,22 @@ import pandas as pd
 from PIL import Image
 from ultralytics import YOLO
 import matplotlib.pyplot as plt
-
+from exif import Image as eImage
 
 class Extractor:
-    def __init__(self, img, outs, paths, model_path):
+    def __init__(self, img, img_path, outs, paths, model_path):
         self.outs = os.path.abspath(os.path.relpath(outs))
         self.paths = paths
         self.model_path = os.path.relpath(model_path)
 
-        DPI = img.info['dpi'][0]
+        #################################### DPI ####################################
+        with open(os.path.join(os.path.relpath('resources'), img_path), 'r', errors='ignore') as image_file:
+            my_image = eImage(image_file)
+            print(my_image.has_exif)
+            if my_image.has_exif:
+                print(my_image.DPI)
+
+        DPI = 3200
         img = np.array(img)
 
         # converting rgb to bgr
@@ -24,8 +31,9 @@ class Extractor:
         if img.shape[0] < img.shape[1]:
             img = self.get_vertical_board(img, DPI)
 
-        cropped_img = self.focus_board(img, DPI)
-        rotated_img = self.rotate_image(cropped_img, DPI)
+        # cropped_img = self.focus_board(img, DPI)
+            
+        rotated_img = self.rotate_image(img, DPI)
 
         holes = self.get_holes(rotated_img, DPI)
         _ = self.annotate_holes(rotated_img, holes, DPI)
@@ -42,8 +50,8 @@ class Extractor:
         resize_img = cv2.resize(img, (int(img.shape[1] // DPI * 600), int(img.shape[0] // DPI * 600)), interpolation=cv2.INTER_AREA)
 
         left_strip = cv2.cvtColor(resize_img[:, : 600].copy(), cv2.COLOR_BGR2GRAY)
-        
-        circles_left = cv2.HoughCircles(left_strip, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=29)
+        # cv2.imwrite('temp-left-strip.jpg', left_strip)
+        circles_left = cv2.HoughCircles(left_strip, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=31)
         circles_left = np.int32(circles_left[0])
 
         left_strip_res = left_strip.copy()
@@ -55,7 +63,7 @@ class Extractor:
         if left_count == 1:
             img = np.transpose(img, (1, 0, 2))[:, ::-1, :]
         else:
-            img = np.transpose(img, (1, 0, 2))[::-1, ::-1, :]
+            img = np.transpose(img, (1, 0, 2))[::-1, :, :]
         return img
 
     def focus_board(self, image, DPI, /, threshold=50, chips=[100, 100], filename='Cropped.jpg'):
@@ -119,6 +127,7 @@ class Extractor:
         rotated_img = image.copy()
         rotation_matrix = cv2.getRotationMatrix2D((0, 0), -angle, 1)
         rotated_img = cv2.warpAffine(rotated_img, rotation_matrix, (rotated_img.shape[1], rotated_img.shape[0]))
+        # cv2.imwrite("temp2.jpg", rotated_img)
 
         return rotated_img
 
@@ -128,7 +137,7 @@ class Extractor:
         resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
 
         # getting the window for rotation-angle measurement
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : resized_img.shape[0] - 400, :], cv2.COLOR_BGR2GRAY)
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 500 : resized_img.shape[0] - 300, :], cv2.COLOR_BGR2GRAY)
 
         circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=31)
 
@@ -136,9 +145,10 @@ class Extractor:
         holes = np.flip(holes[0, np.argsort(holes[:, :, 1])[0]], axis=0)
         for hole in holes:
             cv2.circle(window, (hole[0], hole[1]), 22, (255, 255, 255), -1)
-        # plt.imshow(window)
+        plt.imshow(window)
+        # cv2.imwrite('temp.jpg', window)
 
-        ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 700) * factor]
+        ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 500) * factor]
 
         # shifting the real coords for considering hole1 as reference point or (0, 0)
         shifted_x = real_x - real_x[0]

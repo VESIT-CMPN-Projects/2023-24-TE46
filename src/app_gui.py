@@ -146,7 +146,7 @@ class AppGUI(tk.Tk):
             print(err)
 
         im_path = self.main_im_path.get()
-        Extractor(self.main_im, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path)
+        Extractor(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path)
 
 
     def to_stage1(self):
