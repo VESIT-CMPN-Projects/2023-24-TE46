@@ -1,10 +1,18 @@
-from timer import RepeatedTimer
-from extractor import Extractor
+## MODULES ##
 from PIL import Image, ImageTk
 import os
 import numpy as np
 import tkinter as tk
+from threading import Thread
+from exif import Image as eImage
 
+## CUSTOM MODULES ##
+from timer import RepeatedTimer
+from extracter import Extracter
+from detector import Detector
+from exporter import Exporter
+
+## AppGUI class ##
 class AppGUI(tk.Tk):
     def __init__(self, rel1, rel2, model_path):
         super().__init__()
@@ -146,8 +154,10 @@ class AppGUI(tk.Tk):
             print(err)
 
         im_path = self.main_im_path.get()
-        Extractor(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path)
 
+        # Starting the processing of board in a separate thread
+        thread = Thread(target=self.process_board, args=(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path))
+        thread.start()
 
     def to_stage1(self):
         self.spn_speed.grid_forget()
@@ -159,7 +169,7 @@ class AppGUI(tk.Tk):
 
     def update_resources(self):
         self.choices = np.array(os.listdir(os.path.abspath(os.path.relpath(self.resources))))
-        self.choices = [choice for choice in self.choices if choice.endswith('.jpg') or choice.endswith('.png') or choice.endswith('.jpeg')]
+        self.choices = [choice for choice in self.choices if (choice.endswith('.jpg') or choice.endswith('.png') or choice.endswith('.jpeg')) and choice != 'default.png']
         self.main_im_path = tk.StringVar(self.frame_images)
         self.main_im_path.set(self.choices[0])
 
@@ -185,7 +195,10 @@ class AppGUI(tk.Tk):
             self.lbl_image["image"] = self.main_tk_im
 
         else:
-            path = os.path.join(self.paths[self.stage - 2], self.names[self.hole_number])
+            if self.names is None:
+                path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), 'default.png')
+            else:
+                path = os.path.join(self.paths[self.stage - 2], self.names[self.hole_number])
             self.img = Image.open(path, 'r').resize((300, 400))
             self.img_tk = ImageTk.PhotoImage(image=self.img)
             self.lbl_image['image'] = self.img_tk
@@ -283,3 +296,39 @@ class AppGUI(tk.Tk):
         except Exception as err:
             print(err)
             
+
+    ################################# ML Call Function #################################
+            
+    def process_board(self, *args):        
+        img = args[0]
+        im_path = args[1]
+        outs = os.path.abspath(os.path.relpath(args[2]))
+        paths = args[3]
+        model_path = os.path.relpath(args[4])
+
+        exporter = Exporter(outs, paths)
+        extractor = Extracter(exporter)
+        detector = Detector(exporter, model_path)
+
+        #################################### DPI ####################################
+        with open(os.path.join(os.path.relpath('resources'), im_path), 'r', errors='ignore') as image_file:
+            my_image = eImage(image_file)
+            print(my_image.has_exif)
+            if my_image.has_exif:
+                print(my_image.DPI)
+
+        DPI = 3200
+        img = np.array(img)
+
+        # converting rgb to bgr
+        img = np.flip(img, axis=-1)
+
+        holes = detector.get_holes(img, DPI)
+        _ = exporter.annotate_holes(img, holes, DPI)
+        extractor.extract(img, holes, DPI, path=paths[0])
+
+        detection_results, _ = detector.detect_signal_pads()
+        extractor.get_analytics(detection_results)
+
+        exporter.get_vid(paths[0], "video.avi")
+        exporter.get_vid(paths[1], "video--s.avi")
