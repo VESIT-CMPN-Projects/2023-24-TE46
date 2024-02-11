@@ -11,9 +11,10 @@ from data import real_y, real_x, names
 
 ## Detector class ##
 class Detector:
-    def __init__(self, exporter, model_path):
+    def __init__(self, exporter, model_path, conf):
         self.model_path = model_path
         self.exporter = exporter
+        self.conf = conf
 
 
     def get_holes(self, image, DPI):
@@ -57,17 +58,19 @@ class Detector:
 
         """Function to detect the signal pads from the stepped holes"""
 
-        my_model = YOLO(os.path.join(self.model_path, 'yolov8n.pt'))
+        my_model = YOLO(os.path.join(self.model_path, 'best.pt'))
         DPI = None
 
         detection_results = []
+        offsets = {'image': [], 'offset': []}
 
         for image_path in glob.glob(os.path.join(self.exporter.outs, self.exporter.paths[0], '*.jpg')):
-            results = list(my_model(image_path, conf=0.5))
+            results = list(my_model(image_path, conf=self.conf))
             result = results[0]
             markings_vis = cv2.imread(image_path)
 
-            self.get_concentrics(markings_vis)
+            offsets['image'].append(os.path.basename(image_path))
+            offsets['offset'].append(self.get_concentrics(markings_vis))
 
             if DPI is None:
                 DPI = Image.open(image_path).info["dpi"][0]
@@ -79,14 +82,14 @@ class Detector:
 
             detection_results.append({ 'result': result, 'bxs': bxs, 'test_list': test_list })
 
-        return detection_results, self.exporter.save_json(detection_results)
+        return detection_results, self.exporter.save_json(detection_results), self.exporter.save_csv(offsets, "offsets.csv")
 
 
     def get_concentrics(self, img, /, color1=(255, 255, 0), color2=(255, 0, 255)):
 
         """Function to detect concentric circles from the stepped holes"""
         
-        blur_img = cv2.GaussianBlur(img, ksize=(5, 5), sigmaX=1.1)
+        blur_img = cv2.GaussianBlur(img, ksize=(5, 5), sigmaX=1.2)
         gray_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2GRAY)
 
         big_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.8, minDist=600, param1=8, param2=29, minRadius=250, maxRadius=300))
@@ -94,3 +97,7 @@ class Detector:
 
         self.exporter.mark_circles(img, big_circles, center_radius=3, thickness=3, color=color1)
         self.exporter.mark_circles(img, small_circles, center_radius=3, thickness=3, color=color2)
+
+        print(big_circles[0][0][0], small_circles[0][0][0])
+        print(np.sqrt(np.power((big_circles[0][0][0] - small_circles[0][0][0]), 2) - np.power((big_circles[0][0][1] - small_circles[0][0][1]), 2)))
+        return np.sqrt(np.power((big_circles[0][0][0] - small_circles[0][0][0]), 2) - np.power((big_circles[0][0][1] - small_circles[0][0][1]), 2))

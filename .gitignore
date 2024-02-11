@@ -5,6 +5,8 @@ outs/Debug
 outs/FED_00*
 outs/All_Names.png
 outs/detection_results.json
+outs/test_3200dpi_90_ss_brightness1_sharpness1
+outs/test_3200dpi_90_ss_brightness1_sharpness1--S
 
 venv
 src_v1.*

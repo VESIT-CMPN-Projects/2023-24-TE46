@@ -14,11 +14,12 @@ from exporter import Exporter
 
 ## AppGUI class ##
 class AppGUI(tk.Tk):
-    def __init__(self, rel1, rel2, model_path):
+    def __init__(self, rel1, rel2, model_path, conf):
         super().__init__()
 
         Image.MAX_IMAGE_PIXELS = None
         self.model_path = model_path
+        self.conf = conf
         
         # Setting data and parameters
         self.timer = RepeatedTimer(1, lambda: self.display('next'))
@@ -156,7 +157,7 @@ class AppGUI(tk.Tk):
         im_path = self.main_im_path.get()
 
         # Starting the processing of board in a separate thread
-        thread = Thread(target=self.process_board, args=(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path))
+        thread = Thread(target=self.process_board, args=(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path, self.conf))
         thread.start()
 
     def to_stage1(self):
@@ -195,10 +196,10 @@ class AppGUI(tk.Tk):
             self.lbl_image["image"] = self.main_tk_im
 
         else:
-            if self.names is None:
+            if len(self.names) == 0:
                 path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), 'default.png')
             else:
-                path = os.path.join(self.paths[self.stage - 2], self.names[self.hole_number])
+                path = os.path.join(self.paths[self.stage - 2], self.names[self.hole_number - 1])
             self.img = Image.open(path, 'r').resize((300, 400))
             self.img_tk = ImageTk.PhotoImage(image=self.img)
             self.lbl_image['image'] = self.img_tk
@@ -206,7 +207,7 @@ class AppGUI(tk.Tk):
 
     def update_names(self):
         self.names = None if self.stage == 1 else os.listdir(self.paths[self.stage - 2])
-        
+
 
     ################################# Control Functions #################################
         
@@ -242,6 +243,10 @@ class AppGUI(tk.Tk):
     ################################# Display Function #################################
 
     def display(self, direction='current'):
+        if self.names is not None and len(self.names) == 0: 
+            self.update_img()
+            self.hole_number = -1
+
         try:
             if direction == 'next':
                 self.hole_number += 1
@@ -305,10 +310,11 @@ class AppGUI(tk.Tk):
         outs = os.path.abspath(os.path.relpath(args[2]))
         paths = args[3]
         model_path = os.path.relpath(args[4])
+        conf = args[5]
 
         exporter = Exporter(outs, paths)
         extractor = Extracter(exporter)
-        detector = Detector(exporter, model_path)
+        detector = Detector(exporter, model_path, conf)
 
         #################################### DPI ####################################
         with open(os.path.join(os.path.relpath('resources'), im_path), 'r', errors='ignore') as image_file:
@@ -327,7 +333,7 @@ class AppGUI(tk.Tk):
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract(img, holes, DPI, path=paths[0])
 
-        detection_results, _ = detector.detect_signal_pads()
+        detection_results, _, _ = detector.detect_signal_pads()
         extractor.get_analytics(detection_results)
 
         exporter.get_vid(paths[0], "video.avi")

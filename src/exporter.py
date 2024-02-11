@@ -102,13 +102,13 @@ class Exporter:
             return False
 
 
-    def save_csv(self, data):
+    def save_csv(self, data, filename):
 
         """Function to convert dictionary and write JSON object to CSV"""
 
         try:
             data_frame = pd.DataFrame(data)
-            data_frame.to_csv(os.path.join(self.outs, "area.csv"))
+            data_frame.to_csv(os.path.join(self.outs, filename if filename.endswith(".csv") else filename + ".csv"))
             return True
         except:
             return False

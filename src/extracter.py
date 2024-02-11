@@ -12,7 +12,7 @@ class Extracter:
         self.exporter = exporter
 
 
-    def extract(self, image, holes, image_DPI, /, path="Conventionally_named_holes", offset=(100, 100)):
+    def extract(self, image, holes, image_DPI, /, path="Conventionally_named_holes", offset=(70, 70)):
 
         """Function to extract holes from the img"""
 
@@ -87,4 +87,4 @@ class Extracter:
 
         data={'Area11': Area11, 'Area1': Area1, 'Area3': Area3, 'Area5': Area5, 'Area7': Area7, 'Area9': Area9}
 
-        return self.exporter.save_csv(data)
+        return self.exporter.save_csv(data, "area.csv")
