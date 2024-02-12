@@ -8,6 +8,8 @@ class RepeatedTimer(Thread):
         self.speed = speed
         self.function = function
         self.pause = False
+        self.daemon = True
+
 
     def run(self):
         while not self.pause:
@@ -15,6 +17,7 @@ class RepeatedTimer(Thread):
                        (time.monotonic() % (60 / (self.speed * 16)))) # fix the distortion in time.sleep
             if not self.pause:
                 self.function()
+
 
     def stop(self):
         self.pause = True

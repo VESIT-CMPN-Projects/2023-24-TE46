@@ -54,12 +54,11 @@ class Detector:
         return coords_real_pix
 
 
-    def detect_signal_pads(self):
+    def detect_signal_pads(self, DPI):
 
         """Function to detect the signal pads from the stepped holes"""
 
         my_model = YOLO(os.path.join(self.model_path, 'best.pt'))
-        DPI = None
 
         detection_results = []
         offsets = {'image': [], 'offset': []}
@@ -67,13 +66,13 @@ class Detector:
         for image_path in glob.glob(os.path.join(self.exporter.outs, self.exporter.paths[0], '*.jpg')):
             results = list(my_model(image_path, conf=self.conf))
             result = results[0]
+
+            # Reading the image at image_path for annotation of signal pads and putting text
             markings_vis = cv2.imread(image_path)
 
+            # Updating the dictionary for storing offsets between the holes
             offsets['image'].append(os.path.basename(image_path))
-            offsets['offset'].append(self.get_concentrics(markings_vis))
-
-            if DPI is None:
-                DPI = Image.open(image_path).info["dpi"][0]
+            offsets['offset'].append(self.get_concentrics(markings_vis, DPI))
 
             bxs = np.int64(result.boxes.xywh.cpu().numpy())
             test_list = result.boxes.cls.cpu().numpy().tolist()
@@ -82,10 +81,10 @@ class Detector:
 
             detection_results.append({ 'result': result, 'bxs': bxs, 'test_list': test_list })
 
-        return detection_results, self.exporter.save_json(detection_results), self.exporter.save_csv(offsets, "offsets.csv")
+        return detection_results, self.exporter.save_csv(offsets, "offsets.csv")
 
 
-    def get_concentrics(self, img, /, color1=(255, 255, 0), color2=(255, 0, 255)):
+    def get_concentrics(self, img, DPI, /, color1=(255, 255, 0), color2=(255, 0, 255)):
 
         """Function to detect concentric circles from the stepped holes"""
         
@@ -97,7 +96,6 @@ class Detector:
 
         self.exporter.mark_circles(img, big_circles, center_radius=3, thickness=3, color=color1)
         self.exporter.mark_circles(img, small_circles, center_radius=3, thickness=3, color=color2)
+        self.exporter.write(img, f"Offset = {np.round(np.sqrt(np.power((big_circles[0][0][0] - small_circles[0][0][0]), 2) + np.power((big_circles[0][0][1] - small_circles[0][0][1]), 2)) * 25400 / DPI, 3)}", DPI // 600, x_mul=75)
 
-        print(big_circles[0][0][0], small_circles[0][0][0])
-        print(np.sqrt(np.power((big_circles[0][0][0] - small_circles[0][0][0]), 2) - np.power((big_circles[0][0][1] - small_circles[0][0][1]), 2)))
-        return np.sqrt(np.power((big_circles[0][0][0] - small_circles[0][0][0]), 2) - np.power((big_circles[0][0][1] - small_circles[0][0][1]), 2))
+        return np.sqrt(np.power((big_circles[0][0][0] - small_circles[0][0][0]), 2) + np.power((big_circles[0][0][1] - small_circles[0][0][1]), 2)) * 25400 / DPI

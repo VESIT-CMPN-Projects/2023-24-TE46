@@ -158,6 +158,7 @@ class AppGUI(tk.Tk):
 
         # Starting the processing of board in a separate thread
         thread = Thread(target=self.process_board, args=(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path, self.conf))
+        thread.daemon = True
         thread.start()
 
     def to_stage1(self):
@@ -333,8 +334,8 @@ class AppGUI(tk.Tk):
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract(img, holes, DPI, path=paths[0])
 
-        detection_results, _, _ = detector.detect_signal_pads()
-        extractor.get_analytics(detection_results)
+        detection_results, _ = detector.detect_signal_pads(DPI)
+        extractor.get_analytics(detection_results, DPI)
 
         exporter.get_vid(paths[0], "video.avi")
         exporter.get_vid(paths[1], "video--s.avi")

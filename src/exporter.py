@@ -5,6 +5,7 @@ import glob
 from PIL import Image
 import json
 import pandas as pd
+import numpy as np
 
 ## Exporter Class ##
 class Exporter:
@@ -12,6 +13,8 @@ class Exporter:
     def __init__(self, outs, paths):
         self.outs = outs
         self.paths = paths
+        self.fontScales = [0.5, 0.6, 0, 0.7, 0.7, 0, 0, 0.8]
+        self.thicks = [1, 2, 0, 2, 2, 0, 0, 3]
 
 
     def annotate_circles(self, image, holes, DPI, /, color1=(255, 255, 255), color2=(255, 255, 0), thickness1=3, radius=4, thickness2=-1, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, filename="All_Names.png"):
@@ -90,16 +93,8 @@ class Exporter:
         pil_img.save(os.path.join(self.outs, self.paths[1], os.path.basename(image_path)), dpi=(DPI, DPI))
 
 
-    def save_json(self, detection_results):
-
-        """Function to convert and write JSON object to file"""
-
-        try:
-            with open(os.path.join(self.outs, "detection_results.json"), "w") as outfile: 
-                json.dump(detection_results, outfile, sort_keys=True, indent=4)
-            return True
-        except:
-            return False
+    def write(self, img, text, factor, x_mul):
+        cv2.putText(img, f"{text}", (x_mul * factor, img.shape[0] - 10 * factor), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=self.fontScales[factor - 1], color=(0, 0, 0), thickness=self.thicks[factor - 1])
 
 
     def save_csv(self, data, filename):
