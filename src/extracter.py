@@ -10,6 +10,7 @@ class Extracter:
 
     def __init__(self, exporter):
         self.exporter = exporter
+        self.data = []
 
 
     def extract(self, image, holes, image_DPI, /, path="Conventionally_named_holes", offset=(70, 70)):

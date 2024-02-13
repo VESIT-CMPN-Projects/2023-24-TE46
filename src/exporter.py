@@ -15,26 +15,9 @@ class Exporter:
         self.paths = paths
         self.fontScales = [0.5, 0.6, 0, 0.7, 0.7, 0, 0, 0.8]
         self.thicks = [1, 2, 0, 2, 2, 0, 0, 3]
-
-
-    def annotate_circles(self, image, holes, DPI, /, color1=(255, 255, 255), color2=(255, 255, 0), thickness1=3, radius=4, thickness2=-1, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, filename="All_Names.png"):
-
-        """Function to annotate circles"""
-
-        if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):
-            return
-
-        result_img = image.copy()
-        
-        for hole in holes:
-            cv2.putText(result_img, str(hole[2].split('_')[0]), (int(hole[0]), int(hole[1])), fontFace, fontScale * (DPI // 600), color1, thickness1 * (DPI // 600))
-            cv2.circle(result_img, (int(hole[0]), int(hole[1])), radius * (DPI // 600), color2, thickness2 * (DPI // 600))
-
-        cv2.imwrite(os.path.join(self.outs, filename), result_img)
-        return result_img
     
 
-    def annotate_holes(self, image, holes, DPI, /, color1=(255, 255, 255), color2=(255, 255, 0), thickness1=3, radius=4, thickness2=-1, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, filename="All_Names.png"):
+    def annotate_holes(self, image, holes, DPI, /, color1=(255, 255, 255), color2=(255, 255, 0), thickness1=3, radius=4, thickness2=-1, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, filename="All_Names.jpg"):
 
         """Function to annotate holes"""
 

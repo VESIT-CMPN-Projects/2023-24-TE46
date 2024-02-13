@@ -334,7 +334,7 @@ class AppGUI(tk.Tk):
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract(img, holes, DPI, path=paths[0])
 
-        detection_results, _ = detector.detect_signal_pads(DPI)
+        detection_results, _ = detector.detect_signal_pads(holes, DPI)
         extractor.get_analytics(detection_results, DPI)
 
         exporter.get_vid(paths[0], "video.avi")
