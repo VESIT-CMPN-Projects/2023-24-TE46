@@ -54,14 +54,14 @@ class Detector:
         return coords_real_pix
 
 
-    def detect_signal_pads(self, holes, DPI):
+    def detect_signal_pads(self, DPI):
 
         """Function to detect the signal pads from the stepped holes"""
 
         my_model = YOLO(os.path.join(self.model_path, 'best.pt'))
 
         detection_results = []
-        data_offset = {'image': [], 'actual_x': [], 'actual_y': [], 'outer_centre_x': [], 'outer_centre_y': [], 'inner_centre_x': [], 'inner_centre_y': [], 'offset': [], 'offset_microns': []}
+        data_offset = {}
 
         for index, image_path in enumerate(glob.glob(os.path.join(self.exporter.outs, self.exporter.paths[0], '*.jpg'))):
             results = list(my_model(image_path, conf=self.conf))
@@ -73,15 +73,7 @@ class Detector:
             outer_centre, inner_centre, offset, offset_microns = self.get_concentrics(markings_vis, DPI)
 
             # Updating the dictionary for storing offsets between the holes
-            data_offset['image'].append(os.path.basename(image_path))
-            data_offset['actual_x'].append(holes[index][0])
-            data_offset['actual_y'].append(holes[index][1])
-            data_offset['outer_centre_x'].append(np.int64(np.round(int(holes[index][0]) - 70 + outer_centre[0])))
-            data_offset['outer_centre_y'].append(np.int64(np.round(int(holes[index][1]) - 70 + outer_centre[1])))
-            data_offset['inner_centre_x'].append(np.int64(np.round(int(holes[index][0]) - 70 + inner_centre[0])))
-            data_offset['inner_centre_y'].append(np.int64(np.round(int(holes[index][1]) - 70 + inner_centre[1])))
-            data_offset['offset'].append(offset)
-            data_offset['offset_microns'].append(offset_microns)
+            data_offset.update({os.path.basename(image_path).split('.')[0]: {'outer_centre': outer_centre, 'inner_centre': inner_centre, 'offset': offset, 'offset_microns': offset_microns}})
 
             bxs = np.int64(result.boxes.xywh.cpu().numpy())
             test_list = result.boxes.cls.cpu().numpy().tolist()
@@ -90,18 +82,18 @@ class Detector:
 
             detection_results.append({ 'result': result, 'bxs': bxs, 'test_list': test_list })
 
-        return detection_results, self.exporter.save_csv(data_offset, "offsets.csv")
+        return detection_results, data_offset
 
 
     def get_concentrics(self, img, DPI, /, color1=(255, 255, 0), color2=(255, 0, 255)):
 
         """Function to detect concentric circles from the stepped holes"""
         
-        blur_img = cv2.GaussianBlur(img, ksize=(5, 5), sigmaX=1.2)
+        blur_img = cv2.GaussianBlur(img, ksize=(3, 3), sigmaX=1.1)
         gray_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2GRAY)
 
-        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.8, minDist=600, param1=8, param2=29, minRadius=250, maxRadius=300))
-        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.8, minDist=600, param1=20, param2=29, minRadius=100, maxRadius=150))
+        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=8, param2=29, minRadius=250, maxRadius=300))
+        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=20, param2=29, minRadius=100, maxRadius=150))
 
         self.exporter.mark_circles(img, outer_circles, center_radius=3, thickness=3, color=color1)
         self.exporter.mark_circles(img, inner_circles, center_radius=3, thickness=3, color=color2)

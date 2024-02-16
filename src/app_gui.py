@@ -5,6 +5,7 @@ import numpy as np
 import tkinter as tk
 from threading import Thread
 from exif import Image as eImage
+import json
 
 ## CUSTOM MODULES ##
 from timer import RepeatedTimer
@@ -334,7 +335,15 @@ class AppGUI(tk.Tk):
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract(img, holes, DPI, path=paths[0])
 
-        detection_results, _ = detector.detect_signal_pads(holes, DPI)
+        detection_results, data_offset = detector.detect_signal_pads(DPI)
+        exporter.export_offsets(data_offset, holes, DPI)
+
+        # with open("holes.json", mode='w') as out_file:
+        #     holes_new = []
+        #     for hole in holes:
+        #         holes_new.append(list(hole))
+        #     out_file.write(json.dumps(holes_new))
+            
         extractor.get_analytics(detection_results, DPI)
 
         exporter.get_vid(paths[0], "video.avi")

@@ -3,7 +3,6 @@ import cv2
 import os
 import glob
 from PIL import Image
-import json
 import pandas as pd
 import numpy as np
 
@@ -90,3 +89,53 @@ class Exporter:
             return True
         except:
             return False
+        
+
+    def export_offsets(self, data_offset, holes, DPI):
+        csv_data = {
+            'image': [], 
+            'actual_x (in px)': [], 
+            'actual_y (in px)': [], 
+            'local_outer_centre_x (in px)': [], 
+            'local_outer_centre_y (in px)': [],
+            'local_inner_centre_x (in px)': [],
+            'local_inner_centre_y (in px)': [],
+            'global_outer_centre_x (in px)': [],
+            'global_outer_centre_y (in px)': [],
+            'global_inner_centre_x (in px)': [],
+            'global_inner_centre_y (in px)': [],
+            'outer_centre_x (in mm)': [],
+            'outer_centre_y (in mm)': [],
+            'inner_centre_x (in mm)': [],
+            'inner_centre_y (in mm)': [],
+            'offset (in px)': [],
+            'offset_microns': []
+        }
+
+        data = data_offset['S042_014_999_999']
+        ref_point = holes[np.where(holes[:, 2] == 'S042_014_999_999')][0]
+        ref_point[0] = np.int64(int(ref_point[0]) - (70 * DPI // 600) + data['outer_centre'][0])
+        ref_point[1] = np.int64(int(ref_point[1]) - (70 * DPI // 600) + data['outer_centre'][1])
+
+        for hole in holes:
+            data = data_offset[hole[2]]
+            
+            csv_data['image'].append(hole[2])
+            csv_data['actual_x (in px)'].append(hole[0])
+            csv_data['actual_y (in px)'].append(hole[1])
+            csv_data['local_outer_centre_x (in px)'].append(np.int64(data['outer_centre'][0]))
+            csv_data['local_outer_centre_y (in px)'].append(np.int64(data['outer_centre'][1]))
+            csv_data['local_inner_centre_x (in px)'].append(np.int64(data['inner_centre'][0]))
+            csv_data['local_inner_centre_y (in px)'].append(np.int64(data['inner_centre'][1]))
+            csv_data['global_outer_centre_x (in px)'].append(np.int64(int(hole[0]) - (70 * DPI // 600) + data['outer_centre'][0]))
+            csv_data['global_outer_centre_y (in px)'].append(np.int64(int(hole[1]) - (70 * DPI // 600) + data['outer_centre'][1]))
+            csv_data['global_inner_centre_x (in px)'].append(np.int64(int(hole[0]) - (70 * DPI // 600) + data['inner_centre'][0]))
+            csv_data['global_inner_centre_y (in px)'].append(np.int64(int(hole[1]) - (70 * DPI // 600) + data['inner_centre'][1]))
+            csv_data['outer_centre_x (in mm)'].append(np.int64(csv_data['global_outer_centre_x (in px)'][-1] - int(ref_point[0])) * 25.4 // DPI)
+            csv_data['outer_centre_y (in mm)'].append(np.int64(csv_data['global_outer_centre_y (in px)'][-1] - int(ref_point[1])) * 25.4 // DPI)
+            csv_data['inner_centre_x (in mm)'].append(np.int64(csv_data['global_inner_centre_x (in px)'][-1] - int(ref_point[0])) * 25.4 // DPI)
+            csv_data['inner_centre_y (in mm)'].append(np.int64(csv_data['global_inner_centre_y (in px)'][-1] - int(ref_point[1])) * 25.4 // DPI)
+            csv_data['offset (in px)'].append(data['offset'])
+            csv_data['offset_microns'].append(data['offset_microns'])
+
+        return self.save_csv(csv_data, "offsets.csv")
