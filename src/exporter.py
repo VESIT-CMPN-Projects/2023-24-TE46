@@ -57,7 +57,6 @@ class Exporter:
     def mark_circles(self, img, circles, /, center_radius=10, thickness=3, color=(255, 0, 255)):
 
         """Function to annotate circles with center to the image with no return"""
-
         for circle in circles[0]:
             cv2.circle(img, (int(circle[0]), int(circle[1])), center_radius, thickness=-1, color=color)
             cv2.circle(img, (int(circle[0]), int(circle[1])), int(circle[2]), thickness=thickness, color=color)

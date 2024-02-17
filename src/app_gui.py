@@ -325,13 +325,19 @@ class AppGUI(tk.Tk):
             if my_image.has_exif:
                 print(my_image.DPI)
 
-        DPI = 3200
+        DPI = 2400
         img = np.array(img)
 
         # converting rgb to bgr
         img = np.flip(img, axis=-1)
 
-        holes = detector.get_holes(img, DPI)
+        if img.shape[0] < img.shape[1]:
+            holes = detector.get_holes(img, DPI)
+        else:
+            img = detector.focus_board(img, DPI)
+            img = detector.rotate_image(img, DPI)
+            holes = detector.get_holes_fv(img, DPI)
+            
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract(img, holes, DPI, path=paths[0])
 
@@ -343,7 +349,7 @@ class AppGUI(tk.Tk):
         #     for hole in holes:
         #         holes_new.append(list(hole))
         #     out_file.write(json.dumps(holes_new))
-            
+
         extractor.get_analytics(detection_results, DPI)
 
         exporter.get_vid(paths[0], "video.avi")
