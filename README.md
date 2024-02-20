@@ -7,44 +7,90 @@ The Large Hadron Collider (LHC) at CERN is the largest and most powerful particl
 ## Installing the application
 
 Before installing the application make sure that you have installed Python in your respective system of version between Python 3.9.10 and 3.11.
+### Linux
+#### Through GUI
+(Following Instructions are from gnome based distro with nautilus file explorer)
+1. Making the scripts executable:
+   1. Right Click and select properties of setup.sh
+   2. On Permissions tab, checkmark "Allow executing file as program"
+   3. Repeat the above steps for start.sh
+2. Right click on setup.sh and "Run as a program"
+3. After one time setup, just right click on start.sh and "Run as a program to start it everytime"
+#### Command Line
+0. Clone or Download the repository:
+    ```
+    git clone [https://github.com/GerraAyush/Quality-Assurance.git](url)
 
-### Only for Windows
+    ```
+##### Using install and run Scripts:
+   1. Make the setup and start script executable
+      ```
+      chmod +x setup.sh
+      chmod +x start.sh
+      ```
+   2. Run install script:
+      ```
+      ./setup.sh
+      ```
+   3. Run the application script:
+      ```
+      ./start.sh
+      ```
+##### Manually:
+   1. Install the following required pacakages through your package manager. Example given is for apt.
+      ```
+      sudo apt install python3 python3-pip libsane-dev xsane libsane-dev python-tk
+      ``` 
+
+   2. Inside the project directory, start a terminal. Create and activate new python virtual environment:
+      ```
+      python -m venv ./venv
+      source ./venv/bin/activate
+      ```
+   3. Update pip and install requirements:
+      ```
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+      ```
+   4. Launch the Application GUI:
+       ```
+       python src/app.py
+       ```
+### Windows
 
 Follow the below steps to install and run the application:
 
 1. Download the ZIP file of the code from the following links. GitHub Link for Application:
    [https://github.com/GerraAyush/Quality-Assurance.git](url)
 2. Extract the downloaded ZIP file.
-4. Open a terminal window.
-5. Install Python Virtual Environment if not installed already.
+3. Open a terminal window.
+4. Install Python Virtual Environment if not installed already.
     ```
     py -m pip install --user virtualenv
     ```
-6. Create a virtual environment for the project.
+5. Create a virtual environment for the project.
     ```
     py -m venv venv
     ```
-7. Activate the virtual environment.
+6. Activate the virtual environment.
     ```
     .\venv\Scripts\activate
     ```
-8. Your command prompt will now be prefixed with the name of your environment, in this case, it is called venv.
+7. Your command prompt will now be prefixed with the name of your environment, in this case, it is called venv.
     ```
     Example:
     (combine) PS E:\TIFR Project>
     ```
-9. Navigate to the directory where the application has been cloned.
-10. Run the following command to install all requirements:
+8. Navigate to the directory where the application has been cloned.
+9. Run the following command to install all requirements:
     ```
     python.exe -m pip install --upgrade pip
     pip install -r requirements.txt
     ```
-11. Navigate to the src directory.
-12. Launch the application by executing the following command in the src directory.
+10. Navigate to the src directory.
+11. Launch the application by executing the following command in the src directory.
     ```
     python3 app.py
     ```
-13. When you run the above code you will see a GUI.
+12. When you run the above code you will see a GUI.
 
-## TODO
-- [] Avoid detection of holes and area evaluation for an image if already done
