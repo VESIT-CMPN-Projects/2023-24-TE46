@@ -10,6 +10,9 @@ outs/test_3200dpi_90_ss_brightness1_sharpness1--S
 outs/*.zip
 holes.json
 outs/Cropped.jpg
+outs/Rotated.jpg
+
+.thumbnails
 
 venv
 src_v1.*

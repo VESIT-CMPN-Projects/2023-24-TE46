@@ -14,6 +14,10 @@ class CustomEncoder(json.JSONEncoder):
             return obj
         elif isinstance(obj, np.ndarray):
             return list(obj)
+        elif isinstance(obj, np.int64):
+            return str(obj)
+        elif isinstance(obj, np.float64):
+            return str(obj)
         return json.JSONEncoder.default(self, obj)
 
 ## Exporter Class ##
@@ -109,7 +113,8 @@ class Exporter:
             with open(os.path.join(self.outs, filename if filename.endswith(".json") else filename + ".json"), mode="w+") as out_file:
                 chars_count = out_file.write(jsonObject)
             return chars_count
-        except:
+        except Exception as err:
+            print(err)
             return False
         
 
@@ -166,4 +171,74 @@ class Exporter:
             csv_data['offset (in px)'].append(data['offset'])
             csv_data['offset_microns'].append(data['offset_microns'])
 
-        return self.save_csv(csv_data, "offsets.csv")
+        return csv_data, self.save_csv(csv_data, "offsets.csv")
+    
+    
+    def get_strips(self, img, DPI, holes, /, width = 200):
+
+        """Function to get strip of holes from the PCB"""
+
+        width = width * int(DPI // 600)
+
+        strips_config = []
+        for index in range(0, img.shape[1], width):
+            temp_strip = holes[np.where((np.int64(holes[:, 0]) >= index) & (np.int64(holes[:, 0]) < index + width))]
+            if len(temp_strip) != 0:
+                strips_config.append(temp_strip[:, 2])
+        
+        self.save_json(strips_config, "strips_config.json")
+
+        strips = []
+        for row in range(len(strips_config)):
+            strips.append([])
+            for col in range(len(strips_config[row])):
+                strips[-1].append(list(holes[np.where(holes[:, 2] == strips_config[row][col])][0]))
+
+        return self.save_json(strips, "strips.json"), strips
+    
+
+    def export_strip_offsets(self, img, DPI, holes, offsets, /, width=200):
+        
+        """Function to export data related to offset in the between the outer_circle and the inner_circle"""
+
+        width = width * int(DPI // 600)
+
+        strips_config = []
+        for index in range(0, img.shape[1], width):
+            temp_strip = holes[np.where((np.int64(holes[:, 0]) >= index) & (np.int64(holes[:, 0]) < index + width))]
+            if len(temp_strip) != 0:
+                strips_config.append(temp_strip[:, 2])
+        
+        self.save_json(strips_config, "strips_config.json")
+
+        offsets_headers = list(offsets.keys())
+        offsets_dataframe = pd.DataFrame(offsets)
+
+        strips = []
+        for row in range(len(strips_config)):
+            strips.append({
+                'image': [], 
+                'actual_x (in px)': [], 
+                'actual_y (in px)': [], 
+                'local_outer_centre_x (in px)': [], 
+                'local_outer_centre_y (in px)': [],
+                'local_inner_centre_x (in px)': [],
+                'local_inner_centre_y (in px)': [],
+                'global_outer_centre_x (in px)': [],
+                'global_outer_centre_y (in px)': [],
+                'global_inner_centre_x (in px)': [],
+                'global_inner_centre_y (in px)': [],
+                'outer_centre_x (in mm)': [],
+                'outer_centre_y (in mm)': [],
+                'inner_centre_x (in mm)': [],
+                'inner_centre_y (in mm)': [],
+                'offset (in px)': [],
+                'offset_microns': []
+            })
+
+            for col in range(len(strips_config[row])):
+                offsets_row = np.where(offsets_dataframe["image"] == strips_config[row][col])[0][0]
+                for offsets_col in range(len(offsets_headers)):
+                    strips[-1][offsets_headers[offsets_col]].append(offsets_dataframe.iloc[offsets_row, offsets_col])
+
+        return strips, self.save_json(strips, "strips.json")

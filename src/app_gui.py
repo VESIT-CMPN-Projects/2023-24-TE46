@@ -12,6 +12,7 @@ from retimer import RepeatedTimer
 from extracter import Extracter
 from detector import Detector
 from exporter import Exporter
+from preprocessor import Preprocessor
 
 ## AppGUI class ##
 class AppGUI(tk.Tk):
@@ -23,7 +24,10 @@ class AppGUI(tk.Tk):
         self.conf = conf
         
         # Setting data and parameters
-        self.timer = RepeatedTimer(1, lambda: self.display('next'))
+        self.retimer = RepeatedTimer(1, lambda: self.display('next'))
+        self.crop = False
+        self.rotate = False
+        self.orientation = False # horizontal
         
         # Getting files and values
         self.resources = rel1
@@ -36,6 +40,9 @@ class AppGUI(tk.Tk):
         
         # Setting the title for window
         self.title("VideoUI")
+
+        # defining image preprocessor
+        self.preprocessor = Preprocessor(os.path.abspath(os.path.relpath(self.outs)))
 
         ########################## GUI FRAMES ##########################
 
@@ -81,7 +88,7 @@ class AppGUI(tk.Tk):
 
         ########################## STAGE CONTROLS ##########################
 
-        self.btn_images, self.btn_tk_images, self.imc_btns, self.ims_btns = [], [], [], []
+        self.btn_images, self.btn_tk_images, self.toggles, self.imc_btns, self.ims_btns = [], [], [], [], []
         btn_image_paths = ['back.png', 'next.png', 'play.png', 'pause.png']
         btn_image_paths = [os.path.join(os.path.abspath(os.path.relpath('buttons')), file) for file in btn_image_paths]
 
@@ -113,9 +120,19 @@ class AppGUI(tk.Tk):
 
         # Getting all the images for hole extraction
         self.update_resources()
-        self.display()
 
+        # Options for the images to pick from
         self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *self.choices)
+        
+        # Button that allows cropping of images
+        self.button(master=self.frame_im_controls, text="Crop", shape=(25, 25), function=self.toggle_crop, btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+
+        # Button that allows rotation of images
+        self.button(master=self.frame_im_controls, text="Rotate", shape=(25, 25), function=self.toggle_rotation, btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+
+        # Button that allows selecting orientation of images
+        self.button(master=self.frame_im_controls, text="Vertical", shape=(25, 25), function=self.toggle_orientation, btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+
         self.main_im_path.trace_add("write", self.update_img)
 
         self.update_controls()
@@ -140,25 +157,22 @@ class AppGUI(tk.Tk):
     def from_stage1(self):
         self.hole_number = 1
         self.dropdown.grid_forget()
+        [btn.grid_forget() for btn in self.toggles]
         self.spn_speed.grid(row=0, column=1)
         [btn.grid(row=0, column=index if index == 0 else index + 1) for (index, btn) in enumerate(self.imc_btns)]
         self.lbl_image["width"]=300
         self.lbl_image["height"]=400
 
-        try:
+        if not os.path.exists(self.paths[0]):
             os.mkdir(self.paths[0])
-        except Exception as err:
-            print(err)
-
-        try:
+            
+        if not os.path.exists(self.paths[1]):
             os.mkdir(self.paths[1])
-        except Exception as err:
-            print(err)
 
         im_path = self.main_im_path.get()
 
         # Starting the processing of board in a separate thread
-        thread = Thread(target=self.process_board, args=(self.main_im, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path, self.conf))
+        thread = Thread(target=self.process_board, args=(self.resources, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path, self.conf))
         thread.daemon = True
         thread.start()
 
@@ -166,6 +180,7 @@ class AppGUI(tk.Tk):
         self.spn_speed.grid_forget()
         [btn.grid_forget() for btn in self.imc_btns]
         self.dropdown.grid(row=0, column=1)
+        [btn.grid(row=0, column=index + 2) for (index, btn) in enumerate(self.toggles)]
         self.lbl_image["width"]=340
         self.lbl_image["height"]=468
 
@@ -190,11 +205,19 @@ class AppGUI(tk.Tk):
             self.relpath = os.path.abspath(os.path.relpath(self.outs))
             self.paths = [os.path.join(self.relpath, im_path.split('.')[0]), os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
 
-            path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), im_path)
+            if not os.path.exists(os.path.abspath(os.path.relpath(".thumbnails"))):
+                os.mkdir(os.path.abspath(os.path.relpath(".thumbnails")))
 
-            self.main_im = Image.open(path, mode="r")
-            self.main_resized_im = self.main_im.resize((340, 468))
-            self.main_tk_im = ImageTk.PhotoImage(image=self.main_resized_im)
+            path = os.path.join(os.path.abspath(os.path.relpath(".thumbnails")), im_path)
+            if os.path.exists(path):
+                self.main_im = Image.open(path, mode="r")
+            else:
+                org_path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), im_path)
+                self.main_im = Image.open(org_path, mode="r")
+                self.main_im.thumbnail((340, 468), resample=Image.Resampling.BICUBIC)
+                self.main_im.save(path)
+
+            self.main_tk_im = ImageTk.PhotoImage(image=self.main_im)
             self.lbl_image["image"] = self.main_tk_im
 
         else:
@@ -214,17 +237,17 @@ class AppGUI(tk.Tk):
     ################################# Control Functions #################################
         
     def set_speed(self):
-        self.timer.speed = int(self.spn_speed.get())
+        self.retimer.speed = int(self.spn_speed.get())
 
 
     def play_imshow(self):
         self.speed = int(self.spn_speed.get())
-        self.timer.start()
+        self.retimer.start()
 
 
     def pause_imshow(self):
-        self.timer.stop()
-        self.timer = RepeatedTimer(
+        self.retimer.stop()
+        self.retimer = RepeatedTimer(
             int(self.spn_speed.get()), lambda: self.display('next'))
 
 
@@ -241,6 +264,28 @@ class AppGUI(tk.Tk):
             self.stage -= 1
             self.update_stage()
 
+    
+    ################################# Toggles #################################
+            
+    def toggle_crop(self):
+        self.crop = not self.crop
+        self.toggles[-3]['bg'] = 'black' if self.crop else 'white'
+        self.toggles[-3]['fg'] = 'white' if self.crop else 'black'
+        print("Crop: ", self.crop, self.toggles[-1]['bg'])
+
+
+    def toggle_rotation(self):
+        self.rotate = not self.rotate
+        self.toggles[-2].configure(bg='black' if self.rotate else 'white')
+        self.toggles[-2].configure(fg='white' if self.rotate else 'black')
+        print("Rotation: ", self.rotate, self.toggles[-1]['bg'])
+
+    def toggle_orientation(self):
+        self.orientation = not self.orientation
+        self.toggles[-1].configure(bg='black' if self.orientation else 'white')
+        self.toggles[-1].configure(fg='white' if self.orientation else 'black')
+        print("Orientation: ", self.orientation, self.toggles[-1]['bg'])
+
 
     ################################# Display Function #################################
 
@@ -256,7 +301,7 @@ class AppGUI(tk.Tk):
                     self.hole_number = 0
 
             elif direction == 'previous':
-                if not self.timer.pause:
+                if not self.retimer.pause:
                     self.pause_imshow()
 
                 self.hole_number -= 1
@@ -270,7 +315,7 @@ class AppGUI(tk.Tk):
 
     ################################# Component Function #################################
 
-    def button(self, master, row=None, col=None, text=None, im_path=None, shape=None, function=None, **kwargs):
+    def button(self, master, row=None, col=None, text=None, im_path=None, shape=None, function=None, btn_list=None, **kwargs):
         try:
             if im_path is not None and shape is not None:
                 self.btn_images.append(Image.open(im_path, 'r').resize(shape))
@@ -291,8 +336,11 @@ class AppGUI(tk.Tk):
 
             if function is not None:
                 btn["command"]=function
+
+            if btn_list is not None:
+                btn_list.append(btn)
             
-            if row is not None and col is not None:
+            elif row is not None and col is not None:
                 btn.grid(row=row, column=col)
                 self.ims_btns.append(btn)
 
@@ -307,13 +355,14 @@ class AppGUI(tk.Tk):
     ################################# ML Call Function #################################
             
     def process_board(self, *args):        
-        img = args[0]
+        resources = args[0]
         im_path = args[1]
         outs = os.path.abspath(os.path.relpath(args[2]))
         paths = args[3]
         model_path = os.path.relpath(args[4])
         conf = args[5]
 
+        img = Image.open(os.path.join(os.path.abspath(os.path.relpath(resources)), im_path))
         exporter = Exporter(outs, paths)
         extractor = Extracter(exporter)
         detector = Detector(exporter, model_path, conf)
@@ -325,25 +374,30 @@ class AppGUI(tk.Tk):
             if my_image.has_exif:
                 print(my_image.DPI)
 
-        DPI = 3200
+        DPI = 2400
         img = np.array(img)
 
         # converting rgb to bgr
         img = np.flip(img, axis=-1)
 
-        if img.shape[0] < img.shape[1]:
-            holes = detector.get_holes(img, DPI)
-        else:
-            img = detector.focus_board(img, DPI)
-            img = detector.rotate_image(img, DPI)
+        if self.crop:
+            img = self.preprocessor.focus_board(img, DPI)
+
+        if self.rotate:
+            img = self.preprocessor.rotate_image(img, DPI)
+
+        if self.orientation:
             holes = detector.get_holes_fv(img, DPI)
+        else:
+            holes = detector.get_holes(img, DPI)
         
-        _ = extractor.get_strips(img, DPI, holes, width=300)
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract(img, holes, DPI, path=paths[0])
 
         detection_results, data_offset = detector.detect_signal_pads(DPI)
-        exporter.export_offsets(data_offset, holes, DPI)
+        data_offset_full, _ = exporter.export_offsets(data_offset, holes, DPI)
+
+        exporter.export_strip_offsets(img, DPI, holes, data_offset_full, width=300)
 
         # with open("holes.json", mode='w') as out_file:
         #     holes_new = []

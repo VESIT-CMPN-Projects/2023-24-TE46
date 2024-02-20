@@ -114,27 +114,4 @@ class Extracter:
         }
 
         return self.exporter.save_csv(data, "area.csv")
-
-
-    def get_strips(self, img, DPI, holes, /, width = 200):
-
-        """Function to get strip of holes from the PCB"""
-
-        width = width * int(DPI // 600)
-
-        strips_config = []
-        for index in range(0, img.shape[1], width):
-            temp_strip = holes[np.where((np.int64(holes[:, 0]) >= index) & (np.int64(holes[:, 0]) < index + width))]
-            if len(temp_strip) != 0:
-                strips_config.append(temp_strip[:, 2])
-        
-        self.exporter.save_json(strips_config, "strips_config.json")
-
-        strips = []
-        for row in range(len(strips_config)):
-            strips.append([])
-            for col in range(len(strips_config[row])):
-                strips[-1].append(list(holes[np.where(holes[:, 2] == strips_config[row][col])][0]))
-
-        return self.exporter.save_json(strips, "strips.json")
     
