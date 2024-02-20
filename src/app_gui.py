@@ -8,7 +8,7 @@ from exif import Image as eImage
 import json
 
 ## CUSTOM MODULES ##
-from timer import RepeatedTimer
+from retimer import RepeatedTimer
 from extracter import Extracter
 from detector import Detector
 from exporter import Exporter
