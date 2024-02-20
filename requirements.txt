@@ -7,3 +7,4 @@ ultralytics
 pandas
 tk==0.1.0
 pyarrow
+python-sane; sys_platform == 'linux'
