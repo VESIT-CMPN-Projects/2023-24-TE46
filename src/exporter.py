@@ -5,6 +5,16 @@ import glob
 from PIL import Image
 import pandas as pd
 import numpy as np
+import json
+
+## Custom Encoder for JSON objects ##
+class CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, list):
+            return obj
+        elif isinstance(obj, np.ndarray):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
 
 ## Exporter Class ##
 class Exporter:
@@ -80,7 +90,7 @@ class Exporter:
 
     def save_csv(self, data, filename):
 
-        """Function to convert dictionary and write JSON object to CSV"""
+        """Function to convert dictionary into equivalent CSV"""
 
         try:
             data_frame = pd.DataFrame(data)
@@ -89,8 +99,25 @@ class Exporter:
         except:
             return False
         
+    
+    def save_json(self, data, filename):
+
+        """Function to convert dictionary and write JSON object to JSONFile"""
+
+        try:
+            jsonObject = json.dumps(data, cls=CustomEncoder)
+            with open(os.path.join(self.outs, filename if filename.endswith(".json") else filename + ".json"), mode="w+") as out_file:
+                chars_count = out_file.write(jsonObject)
+            return chars_count
+        except:
+            return False
+        
 
     def export_offsets(self, data_offset, holes, DPI):
+
+        """Function to export data related to offset in the between the outer_circle and the inner_circle"""
+
+        # CSV structure
         csv_data = {
             'image': [], 
             'actual_x (in px)': [], 
@@ -111,11 +138,13 @@ class Exporter:
             'offset_microns': []
         }
 
+        # getting a reference point
         data = data_offset['S042_014_999_999']
         ref_point = holes[np.where(holes[:, 2] == 'S042_014_999_999')][0]
         ref_point[0] = np.int64(int(ref_point[0]) - (70 * DPI // 600) + data['outer_centre'][0])
         ref_point[1] = np.int64(int(ref_point[1]) - (70 * DPI // 600) + data['outer_centre'][1])
 
+        # Filling the CSV with data
         for hole in holes:
             data = data_offset[hole[2]]
             
