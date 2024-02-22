@@ -1,9 +1,11 @@
 ## MODULES ##
 # import json
 import os
+
 import cv2
 import numpy as np
 from PIL import Image
+
 
 ## Extracter class ##
 class Extracter:
@@ -12,7 +14,6 @@ class Extracter:
         self.exporter = exporter
         self.data = []
 
-
     def extract(self, image, holes, image_DPI, /, path="Conventionally_named_holes", offset=(70, 70)):
 
         """Function to extract holes from the img"""
@@ -20,7 +21,7 @@ class Extracter:
         if type(offset) != type(()):
             print("Offset must be specified as a tuple")
             return
-        
+
         factor = image_DPI // 600
         x_offset, y_offset = np.array(offset) * factor
 
@@ -28,17 +29,18 @@ class Extracter:
             strip = (np.ones((25 * factor, 2 * x_offset, 3)) * 255).astype('uint8')
 
             for hole in holes:
-                cropped_hole = image[int(hole[1]) - x_offset : int(hole[1]) + x_offset, int(hole[0]) - y_offset : int(hole[0]) + y_offset]
+                cropped_hole = image[int(hole[1]) - x_offset: int(hole[1]) + x_offset,
+                               int(hole[0]) - y_offset: int(hole[0]) + y_offset]
                 final_img = np.vstack((cropped_hole, strip))
                 self.exporter.write(final_img, f"{hole[2]}.jpg", factor, x_mul=5)
-                Image.fromarray(cv2.cvtColor(final_img, cv2.COLOR_BGR2RGB)).save(f"{os.path.join(self.exporter.outs, path, hole[2])}.jpg", dpi=(image_DPI, image_DPI))
+                Image.fromarray(cv2.cvtColor(final_img, cv2.COLOR_BGR2RGB)).save(
+                    f"{os.path.join(self.exporter.outs, path, hole[2])}.jpg", dpi=(image_DPI, image_DPI))
 
             return True
 
         except Exception as err:
             print(err)
             return False
-    
 
     def get_area(self, detection_results, DPI):
 
@@ -60,15 +62,16 @@ class Extracter:
         # detection_results = json.load(open(os.path.join(self.exporter.outs, "detection_results.json"), "r"))
 
         for idx, detection in enumerate(detection_results):
-            
+
             classes = detection['test_list']
 
             if detection['result'].masks is not None:
-                maskList = [(detection['result'].masks.data[int(a)].cpu().numpy() * 255).astype("uint8") for a in range(len(detection['result'].masks.data))]
+                maskList = [(detection['result'].masks.data[int(a)].cpu().numpy() * 255).astype("uint8") for a in
+                            range(len(detection['result'].masks.data))]
 
                 for mask in enumerate(maskList):
                     edged = cv2.Canny(mask[1], threshold1=30, threshold2=200)
-                    contours, _ = cv2.findContours(edged,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+                    contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
                     for j in range(0, len(contours)):
                         if classes[j] != 13:
@@ -114,4 +117,3 @@ class Extracter:
         }
 
         return self.exporter.save_csv(data, "area.csv")
-    

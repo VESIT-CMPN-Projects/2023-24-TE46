@@ -1,7 +1,9 @@
 ## MODULES ##
+import os
+
 import cv2
 import numpy as np
-import os
+
 
 ## Image PreProcessing Class ##
 class Preprocessor:
@@ -9,15 +11,15 @@ class Preprocessor:
     def __init__(self, outs):
         self.outs = outs
 
-
     def focus_board(self, image, DPI, /, threshold=50, chips=[100, 100], filename='Cropped.jpg'):
         if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):
             return
-        
+
         factor = int(DPI // 600)
-        resized_img = resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
+        resized_img = resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)),
+                                               interpolation=cv2.INTER_AREA)
         result_img = image.copy()
-        
+
         zeroes = np.zeros((resized_img.shape[0], resized_img.shape[1], 3), dtype=np.uint8)
         ones = np.zeros((resized_img.shape[0], resized_img.shape[1], 3), dtype=np.uint8) + 255
 
@@ -31,26 +33,28 @@ class Preprocessor:
         rows = np.where(np.count_nonzero(mask, 1) >= threshold)[0]
         cols = np.where(np.count_nonzero(mask, 0) >= threshold)[0]
 
-        result_img = result_img[rows[0] * factor + chips[0] : rows[-1] * factor - chips[0], 
-                                cols[0] * factor + chips[0] : cols[-1] * factor - chips[0]]
+        result_img = result_img[rows[0] * factor + chips[0]: rows[-1] * factor - chips[0],
+                     cols[0] * factor + chips[0]: cols[-1] * factor - chips[0]]
 
         cv2.imwrite(os.path.join(self.outs, filename), result_img)
 
         return result_img
 
-
     def rotate_image(self, image, DPI, /, filename='Rotated.jpg'):
         if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):
             return
-        
+
         factor = int(DPI // 600)
         print(DPI)
-        resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
+        resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)),
+                                 interpolation=cv2.INTER_AREA)
 
         # We know image is 600DPI after resizing, thus getting the window in a static way
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : resized_img.shape[0] - 300, :], cv2.COLOR_BGR2GRAY)
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700: resized_img.shape[0] - 300, :],
+                              cv2.COLOR_BGR2GRAY)
 
-        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=10, param2=34, minRadius=22, maxRadius=29)
+        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=10, param2=34, minRadius=22,
+                                   maxRadius=29)
 
         holes = np.int64(circles)
         holes = np.flip(holes[0, np.argsort(holes[:, :, 1])[0]], axis=0)

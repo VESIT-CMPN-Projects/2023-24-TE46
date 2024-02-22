@@ -1,13 +1,18 @@
 #!/home/dhep/GitRepos/Quality-Assurance/venv/bin python
-import tkinter as tk
-from PIL import Image, ImageTk
 import os
+import sys
+import tkinter as tk
+
+from PIL import Image, ImageTk
+
 from app_gui import AppGUI
 from window_size import WinSize
-import sys
+IS_LINUX = False
 if sys.platform.startswith('linux'):
     IS_LINUX = True
     from scanner import ScanningApp
+
+
 class MainApp:
     def __init__(self, root):
         self.root = root
@@ -19,8 +24,10 @@ class MainApp:
         else:
             self.w_size = WinSize("small")
         self.root.title("Hexaboard QA Utility")
-        #TODO Window positioning like the following for all windows
-        self.root.geometry("%dx%d+%d+%d" % (self.w_size.main_window[0], self.w_size.main_window[1], ((root.winfo_screenwidth() / 2.) - (self.w_size.main_window[0] / 2.)), ((root.winfo_screenheight() / 2.) - (self.w_size.main_window[1] / 2.))))
+        # TODO Window positioning like the following for all windows
+        self.root.geometry("%dx%d+%d+%d" % (self.w_size.main_window[0], self.w_size.main_window[1],
+                                            ((root.winfo_screenwidth() / 2.) - (self.w_size.main_window[0] / 2.)),
+                                            ((root.winfo_screenheight() / 2.) - (self.w_size.main_window[1] / 2.))))
         self.root.config(bg='white')
 
         # Load your image and logos
@@ -56,9 +63,11 @@ class MainApp:
         scan_butt_img.thumbnail((70, 70))
         scan_butt_img = ImageTk.PhotoImage(scan_butt_img)
         if IS_LINUX:
-            scan_button = tk.Button(root, text="Scanner", compound="left", command=self.start_scanning_app, width=10, height=3, font=("Helvetica", 16))
+            scan_button = tk.Button(root, text="Scanner", compound="left", command=self.start_scanning_app, width=10,
+                                    height=3, font=("Helvetica", 16))
         else:
-            scan_button = tk.Button(root, text="Scanner(Linux Only)", compound="left", command=self.start_scanning_app, width=10,
+            scan_button = tk.Button(root, text="Scanner(Linux Only)", compound="left", command=self.start_scanning_app,
+                                    width=10,
                                     height=3, font=("Helvetica", 16), state='disabled')
         scan_button.grid(row=0, column=5, padx=10, pady=25, sticky="ne")
 
@@ -91,6 +100,7 @@ class MainApp:
         ml_app = AppGUI(rel1, rel2, model_path, conf)
         ml_app.mainloop()
         self.__init__(tk.Tk())
+
 
 if __name__ == "__main__":
     root = tk.Tk()
