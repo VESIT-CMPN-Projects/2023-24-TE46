@@ -1,13 +1,13 @@
 ## MODULES ##
-import cv2
-import os
 import glob
-from PIL import Image
+import os
+import cv2
 import numpy as np
 from ultralytics import YOLO
 
 ## DATA ##
 from data import real_y, real_x, names
+
 
 ## Detector class ##
 class Detector:
@@ -18,16 +18,17 @@ class Detector:
         self.conf = conf
 
     def get_holes(self, image, DPI):
-
         """Function to get the holes from the image"""
 
         factor = int(DPI // 600)
-        resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
+        resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)),
+                                 interpolation=cv2.INTER_AREA)
 
         # getting the window for rotation-angle measurement
-        window = cv2.cvtColor(resized_img[ : , 300 : 500], cv2.COLOR_BGR2GRAY)
+        window = cv2.cvtColor(resized_img[:, 300: 500], cv2.COLOR_BGR2GRAY)
 
-        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=44, minRadius=22, maxRadius=31)
+        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=44, minRadius=22,
+                                   maxRadius=31)
 
         holes = np.int64(circles)
         holes = holes[0, np.argsort(holes[:, :, 0])[0]]
@@ -53,17 +54,18 @@ class Detector:
 
         return coords_real_pix
 
-
     def get_holes_fv(self, image, DPI):
-
         """Function to get the holes from the image"""
 
         factor = int(DPI // 600)
-        resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)), interpolation=cv2.INTER_AREA)
+        resized_img = cv2.resize(image, (int(image.shape[1] // factor), int(image.shape[0] // factor)),
+                                 interpolation=cv2.INTER_AREA)
 
         # getting the window for rotation-angle measurement
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700 : resized_img.shape[0] - 470, :], cv2.COLOR_BGR2GRAY)
-        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22, maxRadius=29)
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700: resized_img.shape[0] - 470, :],
+                              cv2.COLOR_BGR2GRAY)
+        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22,
+                                   maxRadius=29)
 
         holes = np.int64(circles)
         holes = np.flip(holes[0, np.argsort(holes[:, :, 1])[0]], axis=0)
@@ -85,9 +87,7 @@ class Detector:
 
         return coords_real_pix
 
-
     def detect_signal_pads(self, DPI):
-
         """Function to detect the signal pads from the stepped holes"""
 
         my_model = YOLO(os.path.join(self.model_path, 'best.pt'))
@@ -105,31 +105,40 @@ class Detector:
             outer_centre, inner_centre, offset, offset_microns = self.get_concentrics(markings_vis, DPI)
 
             # Updating the dictionary for storing offsets between the holes
-            data_offset.update({os.path.basename(image_path).split('.')[0]: {'outer_centre': outer_centre, 'inner_centre': inner_centre, 'offset': offset, 'offset_microns': offset_microns}})
+            data_offset.update({os.path.basename(image_path).split('.')[0]: {'outer_centre': outer_centre,
+                                                                             'inner_centre': inner_centre,
+                                                                             'offset': offset,
+                                                                             'offset_microns': offset_microns}})
 
             bxs = np.int64(result.boxes.xywh.cpu().numpy())
             test_list = result.boxes.cls.cpu().numpy().tolist()
 
             self.exporter.mark_signal_pads(markings_vis, bxs, image_path, DPI)
 
-            detection_results.append({ 'result': result, 'bxs': bxs, 'test_list': test_list })
+            detection_results.append({'result': result, 'bxs': bxs, 'test_list': test_list})
 
         return detection_results, data_offset
 
-
     def get_concentrics(self, img, DPI, /, color1=(255, 255, 0), color2=(255, 0, 255)):
-
         """Function to detect concentric circles from the stepped holes"""
-        
+
         blur_img = cv2.GaussianBlur(img, ksize=(3, 3), sigmaX=1.1)
         gray_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2GRAY)
 
         factor = DPI // 600
-        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.8, minDist=600, param1=8, param2=29, minRadius=int(46.875 * factor), maxRadius=int(56.25 * factor)))
-        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=25, param2=31, minRadius=int(18.75 * factor), maxRadius=int(28.125 * factor)))
+        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.8, minDist=600, param1=8, param2=29,
+                                                  minRadius=int(46.875 * factor), maxRadius=int(56.25 * factor)))
+        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=25, param2=31,
+                                                  minRadius=int(18.75 * factor), maxRadius=int(28.125 * factor)))
 
         self.exporter.mark_circles(img, outer_circles, center_radius=3, thickness=3, color=color1)
         self.exporter.mark_circles(img, inner_circles, center_radius=3, thickness=3, color=color2)
-        self.exporter.write(img, f"Offset = {np.round(np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI, 3)}um", DPI // 600, x_mul=75)
+        self.exporter.write(img,
+                            f"Offset = {np.round(np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI, 3)}um",
+                            DPI // 600, x_mul=75)
 
-        return (outer_circles[0][0], inner_circles[0][0], np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)), np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI)
+        return (outer_circles[0][0], inner_circles[0][0], np.sqrt(
+            np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(
+                (outer_circles[0][0][1] - inner_circles[0][0][1]), 2)), np.sqrt(
+            np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(
+                (outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI)

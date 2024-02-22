@@ -17,6 +17,7 @@ class WinSize:
             # ML Window sizes
             self.ml_window = []
             self.ml_image = []
+            self.ml_thumb = []
         elif stype == "large":  # >1200p screens(2560x1440, 2160, 3840x2160, 3440x1440)
             # Main Window sizes
             self.main_window = [1275, 1220]
@@ -24,12 +25,13 @@ class WinSize:
             self.main_logos = [248, 248]
 
             # Scan Window sizes
-            self.scan_window = []
-            self.scan_preview = []
+            self.scan_window = [1310, 1100]
+            self.scan_preview = [824, 1060]
 
             # ML Window sizes
             self.ml_window = []
             self.ml_image = []
+            self.ml_thumb = []
         else:                       #<800p screens (1366x768, 1280x720(why do you hate yourself?))
             # Main Window sizes
             self.main_window = [710, 670]
@@ -37,9 +39,10 @@ class WinSize:
             self.main_logos = [100, 100]
 
             # Scan Window sizes
-            self.scan_window = []
-            self.scan_preview = []
+            self.scan_window = [810, 680]
+            self.scan_preview = [470, 680]
 
             # ML Window sizes
             self.ml_window = []
             self.ml_image = []
+            self.ml_thumb = []
