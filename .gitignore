@@ -5,8 +5,8 @@ outs/Debug
 outs/FED_00*
 outs/All_Names.png
 outs/detection_results.json
-outs/test_3200dpi_90_ss_brightness1_sharpness1
-outs/test_3200dpi_90_ss_brightness1_sharpness1--S
+outs/test_3200dpi*
+outs/2024*
 outs/*.zip
 holes.json
 outs/Cropped.jpg

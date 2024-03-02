@@ -1,12 +1,16 @@
 #!/home/dhep/GitRepos/Quality-Assurance/venv/bin python
+
+## MODULES ##
 import os
 import sys
 import tkinter as tk
 
 from PIL import Image, ImageTk
 
+## CUSTOM MODULES ##
 from app_gui import AppGUI
 from window_size import WinSize
+
 IS_LINUX = False
 if sys.platform.startswith('linux'):
     IS_LINUX = True
@@ -43,6 +47,7 @@ class MainApp:
         self.preview_image.grid(row=0, column=0, rowspan=3, columnspan=5, padx=10, pady=10, sticky=tk.W)
         img = Image.open(title_path)
         img.thumbnail((self.w_size.main_app_logo[0], self.w_size.main_app_logo[1]))
+
         # Convert the PIL Image to Tkinter PhotoImage
         tk_image = ImageTk.PhotoImage(img)
         self.preview_image.config(image=tk_image)

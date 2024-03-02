@@ -11,6 +11,7 @@ class Preprocessor:
     def __init__(self, outs):
         self.outs = outs
 
+
     def focus_board(self, image, DPI, /, threshold=50, chips=[100, 100], filename='Cropped.jpg'):
         if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):
             return
@@ -39,6 +40,7 @@ class Preprocessor:
         cv2.imwrite(os.path.join(self.outs, filename), result_img)
 
         return result_img
+
 
     def rotate_image(self, image, DPI, /, filename='Rotated.jpg'):
         if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):

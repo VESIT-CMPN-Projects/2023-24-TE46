@@ -16,6 +16,7 @@ class Detector:
         self.model_path = model_path
         self.exporter = exporter
         self.conf = conf
+        
 
     def get_holes(self, image, DPI):
         """Function to get the holes from the image"""
@@ -54,6 +55,7 @@ class Detector:
 
         return coords_real_pix
 
+
     def get_holes_fv(self, image, DPI):
         """Function to get the holes from the image"""
 
@@ -62,15 +64,18 @@ class Detector:
                                  interpolation=cv2.INTER_AREA)
 
         # getting the window for rotation-angle measurement
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 700: resized_img.shape[0] - 470, :],
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 600: resized_img.shape[0] - 300, :],
                               cv2.COLOR_BGR2GRAY)
-        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=34, minRadius=22,
-                                   maxRadius=29)
+        circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=32, minRadius=22,
+                                   maxRadius=30)
 
         holes = np.int64(circles)
         holes = np.flip(holes[0, np.argsort(holes[:, :, 1])[0]], axis=0)
+        # for hole in holes:
+        #     cv2.circle(window, (hole[0], hole[1]), 22, (255, 255, 255), -1)
+        # cv2.imwrite('temp.jpg', window)
 
-        ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 700) * factor]
+        ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 600) * factor]
 
         # shifting the real coords for considering hole1 as reference point or (0, 0)
         shifted_x = real_y - real_y[0]
@@ -87,7 +92,8 @@ class Detector:
 
         return coords_real_pix
 
-    def detect_signal_pads(self, DPI):
+
+    def start_detections(self, DPI):
         """Function to detect the signal pads from the stepped holes"""
 
         my_model = YOLO(os.path.join(self.model_path, 'best.pt'))
@@ -119,6 +125,7 @@ class Detector:
 
         return detection_results, data_offset
 
+
     def get_concentrics(self, img, DPI, /, color1=(255, 255, 0), color2=(255, 0, 255)):
         """Function to detect concentric circles from the stepped holes"""
 
@@ -128,14 +135,14 @@ class Detector:
         factor = DPI // 600
         outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.8, minDist=600, param1=8, param2=29,
                                                   minRadius=int(46.875 * factor), maxRadius=int(56.25 * factor)))
-        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=25, param2=31,
+        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=20, param2=37,
                                                   minRadius=int(18.75 * factor), maxRadius=int(28.125 * factor)))
 
-        self.exporter.mark_circles(img, outer_circles, center_radius=3, thickness=3, color=color1)
-        self.exporter.mark_circles(img, inner_circles, center_radius=3, thickness=3, color=color2)
+        self.exporter.mark_circles(img, factor, outer_circles, center_radius=1, thickness=1, color=color1)
+        self.exporter.mark_circles(img, factor, inner_circles, center_radius=1, thickness=1, color=color2)
         self.exporter.write(img,
                             f"Offset = {np.round(np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI, 3)}um",
-                            DPI // 600, x_mul=75)
+                            factor, x_mul=75)
 
         return (outer_circles[0][0], inner_circles[0][0], np.sqrt(
             np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(

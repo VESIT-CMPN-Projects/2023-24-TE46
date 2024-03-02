@@ -28,8 +28,9 @@ class Exporter:
     def __init__(self, outs, paths):
         self.outs = outs
         self.paths = paths
-        self.fontScales = [0.5, 0.6, 0, 0.7, 0.7, 0, 0, 0.8]
-        self.thicks = [1, 2, 0, 2, 2, 0, 0, 3]
+        self.fontScales = [0.3, 0.3, 0, 0.7, 0.7, 0, 0, 0.8]
+        self.thicks = [1, 1, 0, 2, 2, 0, 0, 3]
+
 
     def annotate_holes(self, image, holes, DPI, /, color1=(255, 255, 255), color2=(255, 255, 0), thickness1=3, radius=4,
                        thickness2=-1, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, filename="All_Names.jpg"):
@@ -49,6 +50,7 @@ class Exporter:
 
         cv2.imwrite(os.path.join(self.outs, filename), result_img)
         return result_img
+
 
     def get_vid(self, dir, filename):
 
@@ -71,28 +73,33 @@ class Exporter:
             out.write(img)
         out.release()
 
-    def mark_circles(self, img, circles, /, center_radius=10, thickness=3, color=(255, 0, 255)):
+
+    def mark_circles(self, img, factor, circles, /, center_radius=1, thickness=1, color=(255, 0, 255)):
 
         """Function to annotate circles with center to the image with no return"""
-        for circle in circles[0]:
-            cv2.circle(img, (int(circle[0]), int(circle[1])), center_radius, thickness=-1, color=color)
-            cv2.circle(img, (int(circle[0]), int(circle[1])), int(circle[2]), thickness=thickness, color=color)
 
-    def mark_signal_pads(self, img, boxes, image_path, DPI):
+        for circle in circles[0]:
+            cv2.circle(img, (int(circle[0]), int(circle[1])), int(center_radius * factor), thickness=-1, color=color)
+            cv2.circle(img, (int(circle[0]), int(circle[1])), int(circle[2]), thickness=thickness * factor, color=color)
+
+
+    def mark_signal_pads(self, img, boxes, image_path, DPI, /, thickness=1):
 
         """Function to annotate the boxes for signal pads from detection"""
 
         for box in boxes:
             cv2.rectangle(img, (box[0] - box[2] // 2, box[1] - box[3] // 2),
-                          (box[0] + box[2] // 2, box[1] + box[3] // 2), (0, 0, 255), 3)
+                          (box[0] + box[2] // 2, box[1] + box[3] // 2), color=(0, 0, 255), thickness=thickness * (DPI // 600))
 
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(rgb_img)
         pil_img.save(os.path.join(self.outs, self.paths[1], os.path.basename(image_path)), dpi=(DPI, DPI))
 
+
     def write(self, img, text, factor, x_mul):
         cv2.putText(img, f"{text}", (x_mul * factor, img.shape[0] - 10 * factor), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=self.fontScales[factor - 1], color=(0, 0, 0), thickness=self.thicks[factor - 1])
+
 
     def save_csv(self, data, filename):
 
@@ -104,6 +111,7 @@ class Exporter:
             return True
         except:
             return False
+
 
     def save_json(self, data, filename):
 
@@ -118,6 +126,37 @@ class Exporter:
         except Exception as err:
             print(err)
             return False
+        
+    
+    def save_excel(self, data, filename, /, sheetname="Offsets"):
+
+        """Function to convert dictionary and write JSON object to JSONFile"""
+
+        try:
+            dataframe = pd.DataFrame(data)
+            with pd.ExcelWriter(os.path.join(self.outs, filename if filename.endswith(".xlsx") else filename + ".xlsx")) as writer:
+                dataframe.to_excel(writer, sheet_name=sheetname)  
+            return True
+        except Exception as err:
+            print(err)
+            return False
+    
+
+    def json_to_excel(self, /, filename="strips.xlsx", sheetname="Offsets"):
+
+        """Function to convert the strips json to excel file"""
+
+        with open(os.path.join(self.outs, "strips.json"), mode='r') as file:
+            data = json.load(file)
+
+        strip_dataframe = pd.DataFrame()
+        for strip_dict in data:
+            strip_dataframe.combine(pd.DataFrame(strip_dict), pd.concat)
+            strip_dataframe.combine(pd.DataFrame([" " for _ in range(len(data[0].keys()))]), pd.concat)
+
+        with pd.ExcelWriter(os.path.join(self.outs, filename if filename.endswith(".xlsx") else filename + ".xlsx"), engine="xlsxwriter") as writer:
+            strip_dataframe.to_excel(writer, sheet_name=sheetname)
+
 
     def export_offsets(self, data_offset, holes, DPI):
 
@@ -182,6 +221,7 @@ class Exporter:
 
         return csv_data, self.save_csv(csv_data, "offsets.csv")
 
+
     def get_strips(self, img, DPI, holes, /, width=200):
 
         """Function to get strip of holes from the PCB"""
@@ -203,6 +243,7 @@ class Exporter:
                 strips[-1].append(list(holes[np.where(holes[:, 2] == strips_config[row][col])][0]))
 
         return self.save_json(strips, "strips.json"), strips
+
 
     def export_strip_offsets(self, img, DPI, holes, offsets, /, width=200):
 
@@ -248,4 +289,4 @@ class Exporter:
                 for offsets_col in range(len(offsets_headers)):
                     strips[-1][offsets_headers[offsets_col]].append(offsets_dataframe.iloc[offsets_row, offsets_col])
 
-        return strips, self.save_json(strips, "strips.json")
+        return strips, self.save_json(strips, "strips.json"), self.save_excel(strips, "strips1.xlsx")
