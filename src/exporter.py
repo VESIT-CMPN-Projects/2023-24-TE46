@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
+import copy
 
 
 ## Custom Encoder for JSON objects ##
@@ -30,11 +31,29 @@ class Exporter:
         self.paths = paths
         self.fontScales = [0.3, 0.3, 0, 0.7, 0.7, 0, 0, 0.8]
         self.thicks = [1, 1, 0, 2, 2, 0, 0, 3]
+        self.offsets_object_structure = {
+            'image': [],
+            'actual_x (in px)': [],
+            'actual_y (in px)': [],
+            'local_outer_centre_x (in px)': [],
+            'local_outer_centre_y (in px)': [],
+            'local_inner_centre_x (in px)': [],
+            'local_inner_centre_y (in px)': [],
+            'global_outer_centre_x (in px)': [],
+            'global_outer_centre_y (in px)': [],
+            'global_inner_centre_x (in px)': [],
+            'global_inner_centre_y (in px)': [],
+            'outer_centre_x (in mm)': [],
+            'outer_centre_y (in mm)': [],
+            'inner_centre_x (in mm)': [],
+            'inner_centre_y (in mm)': [],
+            'offset (in px)': [],
+            'offset_microns': []
+        }
 
 
     def annotate_holes(self, image, holes, DPI, /, color1=(255, 255, 255), color2=(255, 255, 0), thickness1=3, radius=4,
                        thickness2=-1, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1, filename="All_Names.jpg"):
-
         """Function to annotate holes"""
 
         if not filename.endswith('.png') and not filename.endswith('.jpg') and not filename.endswith('.jpeg'):
@@ -53,7 +72,6 @@ class Exporter:
 
 
     def get_vid(self, dir, filename):
-
         """Function to extract holes from the img"""
 
         paths = glob.glob(os.path.join(self.outs, dir, '*.jpg'))
@@ -75,7 +93,6 @@ class Exporter:
 
 
     def mark_circles(self, img, factor, circles, /, center_radius=1, thickness=1, color=(255, 0, 255)):
-
         """Function to annotate circles with center to the image with no return"""
 
         for circle in circles[0]:
@@ -84,7 +101,6 @@ class Exporter:
 
 
     def mark_signal_pads(self, img, boxes, image_path, DPI, /, thickness=1):
-
         """Function to annotate the boxes for signal pads from detection"""
 
         for box in boxes:
@@ -97,12 +113,13 @@ class Exporter:
 
 
     def write(self, img, text, factor, x_mul):
+        """Function to write the hole details on bottom white strip """
+        
         cv2.putText(img, f"{text}", (x_mul * factor, img.shape[0] - 10 * factor), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=self.fontScales[factor - 1], color=(0, 0, 0), thickness=self.thicks[factor - 1])
 
 
     def save_csv(self, data, filename):
-
         """Function to convert dictionary into equivalent CSV"""
 
         try:
@@ -114,7 +131,6 @@ class Exporter:
 
 
     def save_json(self, data, filename):
-
         """Function to convert dictionary and write JSON object to JSONFile"""
 
         try:
@@ -129,7 +145,6 @@ class Exporter:
         
     
     def save_excel(self, data, filename, /, sheetname="Offsets"):
-
         """Function to convert dictionary and write JSON object to JSONFile"""
 
         try:
@@ -143,7 +158,6 @@ class Exporter:
     
 
     def json_to_excel(self, /, filename="strips.xlsx", sheetname="Offsets"):
-
         """Function to convert the strips json to excel file"""
 
         with open(os.path.join(self.outs, "strips.json"), mode='r') as file:
@@ -159,31 +173,12 @@ class Exporter:
 
 
     def export_offsets(self, data_offset, holes, DPI):
-
         """Function to export data related to offset in the between the outer_circle and the inner_circle"""
 
         # CSV structure
-        csv_data = {
-            'image': [],
-            'actual_x (in px)': [],
-            'actual_y (in px)': [],
-            'local_outer_centre_x (in px)': [],
-            'local_outer_centre_y (in px)': [],
-            'local_inner_centre_x (in px)': [],
-            'local_inner_centre_y (in px)': [],
-            'global_outer_centre_x (in px)': [],
-            'global_outer_centre_y (in px)': [],
-            'global_inner_centre_x (in px)': [],
-            'global_inner_centre_y (in px)': [],
-            'outer_centre_x (in mm)': [],
-            'outer_centre_y (in mm)': [],
-            'inner_centre_x (in mm)': [],
-            'inner_centre_y (in mm)': [],
-            'offset (in px)': [],
-            'offset_microns': []
-        }
+        csv_data = self.get_offsets_struct()
 
-        # getting a reference point
+        # Getting a reference point
         data = data_offset['S042_014_999_999']
         ref_point = holes[np.where(holes[:, 2] == 'S042_014_999_999')][0]
         ref_point[0] = np.int64(int(ref_point[0]) - (70 * DPI // 600) + data['outer_centre'][0])
@@ -222,67 +217,54 @@ class Exporter:
         return csv_data, self.save_csv(csv_data, "offsets.csv")
 
 
-    def get_strips(self, img, DPI, holes, /, width=200):
-
+    def get_strips_config(self, img, DPI, holes, /, width=200):
         """Function to get strip of holes from the PCB"""
 
+        # Setting the width for the strips
         width = width * int(DPI // 600)
 
-        strips_config = []
+        # Creating a list to store the hole names in strips
+        strips_config = {
+            "width": width,
+            "configuration": []
+        }
+
+        # Looping over holes
         for index in range(0, img.shape[1], width):
+
+            # If a hole falls in the range of current index + width, we add it to the current strip
             temp_strip = holes[np.where((np.int64(holes[:, 0]) >= index) & (np.int64(holes[:, 0]) < index + width))]
+
+            # If temp_strip contains a hole, we append the strip
             if len(temp_strip) != 0:
-                strips_config.append(temp_strip[:, 2])
+                strips_config["configuration"].append(temp_strip[:, 2])
 
-        self.save_json(strips_config, "strips_config.json")
-
-        strips = []
-        for row in range(len(strips_config)):
-            strips.append([])
-            for col in range(len(strips_config[row])):
-                strips[-1].append(list(holes[np.where(holes[:, 2] == strips_config[row][col])][0]))
-
-        return self.save_json(strips, "strips.json"), strips
+        # Saving the strips config for the given width
+        return self.save_json(strips_config, "strips_config.json")
 
 
     def export_strip_offsets(self, img, DPI, holes, offsets, /, width=200):
-
         """Function to export data related to offset in the between the outer_circle and the inner_circle"""
 
-        width = width * int(DPI // 600)
+        # Fetching the strips_config
+        strips_config_path = os.path.join(self.outs, "strips_config.json")
+        strips_config_exists = os.path.exists(strips_config_path)
+        if strips_config_exists:
+            with open(strips_config_path) as json_file:
+                strips_config = json.load(json_file)
 
-        strips_config = []
-        for index in range(0, img.shape[1], width):
-            temp_strip = holes[np.where((np.int64(holes[:, 0]) >= index) & (np.int64(holes[:, 0]) < index + width))]
-            if len(temp_strip) != 0:
-                strips_config.append(temp_strip[:, 2])
-
-        self.save_json(strips_config, "strips_config.json")
-
+        # Generating a new strips_config file if it doesn't exists or the desired width is different
+        if not strips_config_exists or width != strips_config["width"]:
+            self.get_strips_config(img, DPI, holes, width)
+        
+        # Getting the headers for the offsets struct
         offsets_headers = list(offsets.keys())
         offsets_dataframe = pd.DataFrame(offsets)
 
+        # Generating the strips
         strips = []
         for row in range(len(strips_config)):
-            strips.append({
-                'image': [],
-                'actual_x (in px)': [],
-                'actual_y (in px)': [],
-                'local_outer_centre_x (in px)': [],
-                'local_outer_centre_y (in px)': [],
-                'local_inner_centre_x (in px)': [],
-                'local_inner_centre_y (in px)': [],
-                'global_outer_centre_x (in px)': [],
-                'global_outer_centre_y (in px)': [],
-                'global_inner_centre_x (in px)': [],
-                'global_inner_centre_y (in px)': [],
-                'outer_centre_x (in mm)': [],
-                'outer_centre_y (in mm)': [],
-                'inner_centre_x (in mm)': [],
-                'inner_centre_y (in mm)': [],
-                'offset (in px)': [],
-                'offset_microns': []
-            })
+            strips.append(self.get_offsets_struct())
 
             for col in range(len(strips_config[row])):
                 offsets_row = np.where(offsets_dataframe["image"] == strips_config[row][col])[0][0]
@@ -290,3 +272,9 @@ class Exporter:
                     strips[-1][offsets_headers[offsets_col]].append(offsets_dataframe.iloc[offsets_row, offsets_col])
 
         return strips, self.save_json(strips, "strips.json"), self.save_excel(strips, "strips1.xlsx")
+    
+
+    def get_offsets_struct(self):
+        """Function to get a copy of offsets_structure"""
+
+        return copy.deepcopy(self.offsets_object_structure)

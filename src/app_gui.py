@@ -186,14 +186,23 @@ class AppGUI(tk.Tk):
             self.paths = [os.path.join(self.relpath, im_path.split('.')[0]),
                           os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
 
-            # Creating folder to store the thumbnails for the images if it doesn't exists
-            # if not os.path.exists(os.path.abspath(os.path.relpath(".thumbnails"))):
-            #     os.mkdir(os.path.abspath(os.path.relpath(".thumbnails")))
+            # Creating folder to store the Thumbnails for the Images if it doesn't exists
+            if not os.path.exists(os.path.abspath(os.path.relpath(".thumbnails"))):
+                os.mkdir(os.path.abspath(os.path.relpath(".thumbnails")))
             
-            # Creating thumbnail
+            # Paths to the Original Image and it's Thumbnail
             abs_path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), im_path)
-            self.main_im = Image.open(abs_path, mode="r")
-            self.main_im.thumbnail((340, 468), resample=Image.Resampling.BICUBIC)
+            thumbnail_path = os.path.join(os.path.abspath(os.path.relpath(".thumbnails")), im_path)
+
+            # Using Thumbnail if it exists
+            if os.path.exists(thumbnail_path):
+                self.main_im = Image.open(thumbnail_path)
+
+            # Else creating Thumbnail
+            else:
+                self.main_im = Image.open(abs_path, mode="r")
+                self.main_im.thumbnail((340, 468), resample=Image.Resampling.BICUBIC)
+                self.main_im.save(thumbnail_path)
 
             # Updating the image in the label
             self.main_tk_im = ImageTk.PhotoImage(image=self.main_im)
@@ -245,8 +254,7 @@ class AppGUI(tk.Tk):
 
         if cropped_holes_count == 92 and processed_holes_count == 92:
             # Displaying dialog box if all the cropped holes and processed holes are present
-            # TODO: Dialog box
-            pass
+            self.display_dialog_box(self.start_process)
 
         else:
             # Else creating new folders for cropped holes and processed holes if not created
@@ -256,15 +264,7 @@ class AppGUI(tk.Tk):
             if not processed_holes_check:
                 os.mkdir(self.paths[1])
 
-        # Getting the name for the image selected for processing
-        im_path = self.main_im_path.get()
-
-        # Starting the processing of board in a separate thread
-        thread = Thread(target=self.process_board, args=(
-            self.resources, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path,
-            self.conf))
-        thread.daemon = True
-        thread.start()
+            self.start_process()
 
 
     def to_stage1(self):
@@ -433,9 +433,41 @@ class AppGUI(tk.Tk):
         except Exception as err:
             print(err)
 
+
+    def display_dialog_box(self, callback):
+        """Function to display a top-level consent requesting dialog box"""
+
+        ## HELPER FUNCTIONS ##
+        def process():
+            callback()
+            win.destroy()
+
+        # Setting the GUI for the dialog box
+        win = tk.Toplevel(height=300, width=100)
+        win.title('Confirmation')
+        tk.Label(win, text="Do you want to run the model?").grid(row=0, column=0, columnspan=2, padx=10, pady=5)
+        tk.Button(win, text='Run', command=process).grid(row=1, column=0,  padx=10, pady=5)
+        tk.Button(win, text='Cancel', command=win.destroy).grid(row=1, column=1,  padx=10, pady=5)
+
+
     ################################# ML Call Function #################################
+        
+    def start_process(self):
+        """Function to start processing of the board"""
+
+        # Getting the name for the image selected for processing
+        im_path = self.main_im_path.get()
+
+        # Starting the processing of board in a separate thread
+        thread = Thread(target=self.process_board, args=(
+            self.resources, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path,
+            self.conf))
+        thread.daemon = True
+        thread.start()
+
 
     def process_board(self, *args):
+        """Function to process the board"""
 
         # Storing the variables here to avoid race conditions with main thread
         # With these set here, user can start ML process on multiple images at once
@@ -486,7 +518,7 @@ class AppGUI(tk.Tk):
 
         # Annotating all the holes obtained to the original image
         _ = exporter.annotate_holes(img, holes, DPI)
-        extractor.extract(img, holes, DPI, path=paths[0])
+        extractor.extract_holes(img, holes, DPI, path=paths[0])
 
         # Updatingg the names and img to update GUI in stages other than stage1
         if self.stage == 2 or self.stage == 3:

@@ -14,8 +14,7 @@ class Extracter:
         self.exporter = exporter
         self.data = []
 
-    def extract(self, image, holes, image_DPI, /, path="Conventionally_named_holes", offset=(70, 70)):
-
+    def extract_holes(self, image, holes, image_DPI, /, path="Conventionally_named_holes", offset=(70, 70)):
         """Function to extract holes from the img"""
 
         if type(offset) != type(()):
@@ -29,8 +28,7 @@ class Extracter:
             strip = (np.ones((25 * factor, 2 * x_offset, 3)) * 255).astype('uint8')
 
             for hole in holes:
-                cropped_hole = image[int(hole[1]) - x_offset: int(hole[1]) + x_offset,
-                               int(hole[0]) - y_offset: int(hole[0]) + y_offset]
+                cropped_hole = image[int(hole[1]) - x_offset: int(hole[1]) + x_offset, int(hole[0]) - y_offset: int(hole[0]) + y_offset]
                 final_img = np.vstack((cropped_hole, strip))
                 self.exporter.write(final_img, f"{hole[2]}.jpg", factor, x_mul=5)
                 Image.fromarray(cv2.cvtColor(final_img, cv2.COLOR_BGR2RGB)).save(
@@ -43,7 +41,6 @@ class Extracter:
             return False
 
     def get_area(self, detection_results, DPI):
-
         """Function to obtain area csv from the detected signal pads."""
 
         Area11 = [0] * 92
@@ -74,7 +71,7 @@ class Extracter:
                     contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
                     for j in range(0, len(contours)):
-                        if classes[j] != 13:
+                        if j < len(classes) and classes[j] != 13:
                             area = cv2.contourArea(contours[j])
                             if classes[j] == 0:
                                 Area1[idx] = area * 25400 / DPI
