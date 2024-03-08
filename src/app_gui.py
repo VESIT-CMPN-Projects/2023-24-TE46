@@ -124,8 +124,10 @@ class AppGUI(tk.Tk):
             master=self.frame_im_controls, from_=1, to=4, command=self.set_speed
         )
 
-        # Getting all the images for hole extraction
+        # Getting all the images for hole extraction -- creating dropdown list
         self.dropdown = None
+        self.main_im_path = tk.StringVar(self.frame_images)
+        self.main_im_path.trace_add("write", self.update_img)
         self.update_resources()
 
         # Button that allows browsing the filesystem for images
@@ -147,8 +149,6 @@ class AppGUI(tk.Tk):
         # Button that allows selecting orientation of images
         self.button(master=self.frame_im_controls, text="Vertical", shape=(25, 25), function=self.toggle_orientation,
                     btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
-
-        self.main_im_path.trace_add("write", self.update_img)
 
         self.update_controls()
 
@@ -188,22 +188,23 @@ class AppGUI(tk.Tk):
 
         # Updating image for stage1
         if self.stage == 1:
-            im_path = self.main_im_path.get()
-            self.relpath = os.path.abspath(os.path.relpath(self.outs))
-            self.paths = [os.path.join(self.relpath, im_path.split('.')[0]),
-                          os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
-
             # Creating folder to store the Thumbnails for the Images if it doesn't exists
             if not os.path.exists(os.path.abspath(os.path.relpath(".thumbnails"))):
                 os.mkdir(os.path.abspath(os.path.relpath(".thumbnails")))
             
             # Paths to the Original Image and it's Thumbnail
+            im_path = self.main_im_path.get()
             abs_path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), im_path)
             thumbnail_path = os.path.join(os.path.abspath(os.path.relpath(".thumbnails")), im_path)
 
             # Using Thumbnail if it exists
             if os.path.exists(thumbnail_path):
-                self.main_im = Image.open(thumbnail_path)
+                # self.main_im = Image.open(thumbnail_path)
+
+                # TODO: get the image from real path iff thumbnail is outdated
+                self.main_im = Image.open(abs_path, mode="r")
+                self.main_im.thumbnail((340, 468), resample=Image.Resampling.BICUBIC)
+                self.main_im.save(thumbnail_path)
 
             # Else creating Thumbnail
             else:
@@ -220,7 +221,7 @@ class AppGUI(tk.Tk):
             
             if len(self.names) == 0:
                 # If names list is empty, displaying the default image
-                path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), 'default.png')
+                path = os.path.join(os.path.abspath(os.path.relpath('resources')), 'default.png')
 
             else:
                 # Else displaying the image at current hole_number
@@ -251,13 +252,22 @@ class AppGUI(tk.Tk):
         self.lbl_image["width"] = 300
         self.lbl_image["height"] = 400
 
+        # Setting the paths for output
+        im_path = self.main_im_path.get()
+        self.relpath = os.path.abspath(os.path.relpath(self.outs))
+        self.paths = [os.path.join(self.relpath, im_path.split('.')[0]),
+                    os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
+        print(self.paths)
+
         # Checking for existence of cropped holes
         cropped_holes_check = os.path.exists(self.paths[0])
         cropped_holes_count = len(os.listdir(self.paths[0])) if cropped_holes_check else 0
+        print(cropped_holes_check)
 
         # Checking for existence of processed holes
         processed_holes_check = os.path.exists(self.paths[1])
         processed_holes_count = len(os.listdir(self.paths[1])) if processed_holes_check else 0
+        print(processed_holes_check)
 
         if cropped_holes_count == 92 and processed_holes_count == 92:
             # Displaying dialog box if all the cropped holes and processed holes are present
@@ -291,22 +301,22 @@ class AppGUI(tk.Tk):
 
 
     def update_resources(self):
-        """ Function to update the dropdown choices in stage1 """
+        """ Function to update the dropdown options in stage1 """
 
-        self.choices = np.array(os.listdir(os.path.abspath(os.path.relpath(self.resources))))
-        print(self.choices)
-        self.choices = [choice for choice in self.choices if (
-                choice.endswith('.jpg') or choice.endswith('.png') or choice.endswith(
-            '.jpeg')) and choice != 'default.png']
-        self.main_im_path = tk.StringVar(self.frame_images)
-        self.main_im_path.set(self.choices[0])
+        # Getting the options for the dropdown
+        options = np.array(os.listdir(os.path.abspath(os.path.relpath(self.resources))))
+        options = [option for option in options if (option.endswith('.jpg') or option.endswith('.png') or option.endswith('.jpeg')) and option != 'default.png']
 
-        # Options for the images to pick from
-        if self.dropdown != None:
-            self.dropdown.grid_forget()
-            self.dropdown.destroy()
-        self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *self.choices)
-        self.dropdown.grid(row=0, column=1)
+        if len(options) != 0:
+            self.main_im_path.set(options[0])
+
+            # Options for the images to pick from
+            if self.dropdown != None:
+                self.dropdown.destroy()
+                self.display()
+
+            self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *options)
+            self.dropdown.grid(row=0, column=1)
 
     ################################# Control Functions #################################
 
@@ -382,8 +392,7 @@ class AppGUI(tk.Tk):
         """ Function to display images in the image label """
 
         # Udating names
-        if self.names is not None:
-            self.update_names()
+        self.update_names()
 
         try:
 
@@ -489,6 +498,7 @@ class AppGUI(tk.Tk):
 
         # Getting the name for the image selected for processing
         im_path = self.main_im_path.get()
+        print(im_path)
 
         # Starting the processing of board in a separate thread
         thread = Thread(target=self.process_board, args=(
@@ -519,16 +529,14 @@ class AppGUI(tk.Tk):
         detector = Detector(exporter, model_path, conf)
 
         # Getting DPI for the image from exif
-        # exif = {
-        #     ExifTags.TAGS[k]: v
-        #     for k, v in img._getexif().items()
-        #     if k in ExifTags.TAGS
-        # }
-        # print(exif)
-        print(img.info.get('DPI'))
-        # DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
-        DPI = 3200
-        print("Image DPI is: ", DPI)
+        exif = {
+            ExifTags.TAGS[k]: v
+            for k, v in img._getexif().items()
+            if k in ExifTags.TAGS
+        }
+        DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
+        print(f"Image DPI: {DPI}")
+        
         img = np.array(img)
 
         # Converting img from being rgb to bgr

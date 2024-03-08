@@ -240,7 +240,7 @@ class Exporter:
                 strips_config["configuration"].append(temp_strip[:, 2])
 
         # Saving the strips config for the given width
-        return self.save_json(strips_config, "strips_config.json")
+        return strips_config, self.save_json(strips_config, "strips_config.json")
 
 
     def export_strip_offsets(self, img, DPI, holes, offsets, /, width=200):
@@ -255,7 +255,7 @@ class Exporter:
 
         # Generating a new strips_config file if it doesn't exists or the desired width is different
         if not strips_config_exists or width != strips_config["width"]:
-            self.get_strips_config(img, DPI, holes, width)
+            strips_config, _ = self.get_strips_config(img, DPI, holes, width)
         
         # Getting the headers for the offsets struct
         offsets_headers = list(offsets.keys())
@@ -263,11 +263,11 @@ class Exporter:
 
         # Generating the strips
         strips = []
-        for row in range(len(strips_config)):
+        for row in range(len(strips_config["configuration"])):
             strips.append(self.get_offsets_struct())
 
-            for col in range(len(strips_config[row])):
-                offsets_row = np.where(offsets_dataframe["image"] == strips_config[row][col])[0][0]
+            for col in range(len(strips_config["configuration"][row])):
+                offsets_row = np.where(offsets_dataframe["image"] == strips_config["configuration"][row][col])[0][0]
                 for offsets_col in range(len(offsets_headers)):
                     strips[-1][offsets_headers[offsets_col]].append(offsets_dataframe.iloc[offsets_row, offsets_col])
 

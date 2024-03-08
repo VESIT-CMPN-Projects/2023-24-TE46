@@ -142,15 +142,15 @@ class Detector:
         """Function to detect concentric circles from the stepped holes"""
 
         # Applying gaussian blur and converting the image to gray image
-        blur_img = cv2.GaussianBlur(img, ksize=(3, 3), sigmaX=1.1)
+        blur_img = cv2.GaussianBlur(img, ksize=(3, 3), sigmaX=1.2)
         gray_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2GRAY)
 
         # Getting the inner and outer circles
         factor = DPI // 600
-        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.5, minDist=600, param1=8, param2=32,
-                                                  minRadius=int(46.875 * factor), maxRadius=int(65 * factor)))
-        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.5, minDist=600, param1=20, param2=53,
-                                                  minRadius=int(18.75 * factor), maxRadius=int(32 * factor)))
+        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=97, param2=58,
+                                                  minRadius=int(46.875 * factor), maxRadius=int(62 * factor)))
+        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.3, minDist=600, param1=30, param2=44,
+                                                  minRadius=int(18.75 * factor), maxRadius=int(29 * factor)))
 
         # Drawing the inner and outer circles
         self.exporter.mark_circles(img, factor, outer_circles, center_radius=1, thickness=1, color=color1)

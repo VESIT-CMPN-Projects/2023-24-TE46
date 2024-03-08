@@ -101,7 +101,7 @@ class MainApp:
         rel1 = "resources"
         rel2 = "outs"
         model_path = "training"
-        conf = 0.54
+        conf = 0.42
         ml_app = AppGUI(rel1, rel2, model_path, conf)
         ml_app.mainloop()
         self.__init__(tk.Tk())
