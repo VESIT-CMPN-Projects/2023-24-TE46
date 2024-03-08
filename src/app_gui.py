@@ -1,6 +1,7 @@
 ## MODULES ##
 import os
 import tkinter as tk
+from tkinter import filedialog
 from threading import Thread
 
 import numpy as np
@@ -30,7 +31,7 @@ class AppGUI(tk.Tk):
         self.rotate = False
         self.orientation = False  # horizontal
 
-        # Getting files and values
+        # Setting default folders and values
         self.resources = rel1
         self.outs = rel2
 
@@ -88,7 +89,7 @@ class AppGUI(tk.Tk):
 
         ########################## STAGE CONTROLS ##########################
 
-        self.btn_images, self.btn_tk_images, self.toggles, self.imc_btns, self.ims_btns = [], [], [], [], []
+        self.btn_images, self.btn_tk_images, self.toggles, self.imc_btns, self.ims_btns, self.dir_setters = [], [], [], [], [], []
         btn_image_paths = ['back.png', 'next.png', 'play.png', 'pause.png']
         btn_image_paths = [os.path.join(os.path.abspath(os.path.relpath('buttons')), file) for file in btn_image_paths]
 
@@ -124,10 +125,16 @@ class AppGUI(tk.Tk):
         )
 
         # Getting all the images for hole extraction
+        self.dropdown = None
         self.update_resources()
 
-        # Options for the images to pick from
-        self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *self.choices)
+        # Button that allows browsing the filesystem for images
+        self.button(master=self.frame_im_controls, text="Resource Path", shape=(25, 25), function=self.get_resource_dir,
+                     btn_list=self.dir_setters, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+        
+        # Button that allows browsing the output folder for images
+        self.button(master=self.frame_im_controls, text="Output Path", shape=(25, 25), function=self.get_output_dir,
+                     btn_list=self.dir_setters, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
 
         # Button that allows cropping of images
         self.button(master=self.frame_im_controls, text="Crop", shape=(25, 25), function=self.toggle_crop,
@@ -234,7 +241,7 @@ class AppGUI(tk.Tk):
 
         # Forgetting the stage 1 controls
         self.dropdown.grid_forget()
-        [btn.grid_forget() for btn in self.toggles]
+        [btn.grid_forget() for btn in (self.toggles + self.dir_setters)]
 
         # Placing the stage 2 controls
         self.spn_speed.grid(row=0, column=1)
@@ -276,7 +283,7 @@ class AppGUI(tk.Tk):
 
         # Placing the stage1 controls
         self.dropdown.grid(row=0, column=1)
-        [btn.grid(row=0, column=index + 2) for (index, btn) in enumerate(self.toggles)]
+        [btn.grid(row=0, column=index + 2) for (index, btn) in enumerate((self.toggles + self.dir_setters))]
 
         # Adjusting image size for stage1
         self.lbl_image["width"] = 340
@@ -287,11 +294,19 @@ class AppGUI(tk.Tk):
         """ Function to update the dropdown choices in stage1 """
 
         self.choices = np.array(os.listdir(os.path.abspath(os.path.relpath(self.resources))))
+        print(self.choices)
         self.choices = [choice for choice in self.choices if (
                 choice.endswith('.jpg') or choice.endswith('.png') or choice.endswith(
             '.jpeg')) and choice != 'default.png']
         self.main_im_path = tk.StringVar(self.frame_images)
         self.main_im_path.set(self.choices[0])
+
+        # Options for the images to pick from
+        if self.dropdown != None:
+            self.dropdown.grid_forget()
+            self.dropdown.destroy()
+        self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *self.choices)
+        self.dropdown.grid(row=0, column=1)
 
     ################################# Control Functions #################################
 
@@ -448,6 +463,23 @@ class AppGUI(tk.Tk):
         tk.Label(win, text="Do you want to run the model?").grid(row=0, column=0, columnspan=2, padx=10, pady=5)
         tk.Button(win, text='Run', command=process).grid(row=1, column=0,  padx=10, pady=5)
         tk.Button(win, text='Cancel', command=win.destroy).grid(row=1, column=1,  padx=10, pady=5)
+
+
+    def get_resource_dir(self):
+        """Function to get the resource directory"""
+        try:
+            self.resources = filedialog.askdirectory()
+            self.update_resources()
+        except Exception as err:
+            print(err)
+
+
+    def get_output_dir(self):
+        """Function to get the output directory"""
+        try:
+            self.outs = filedialog.askdirectory()
+        except Exception as err:
+            print(err)
 
 
     ################################# ML Call Function #################################
