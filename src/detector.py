@@ -126,8 +126,10 @@ class Detector:
                                                                              'offset_microns': offset_microns}})
 
             # Getting the boxes for signal pads
-            bxs = np.int64(result.boxes.xywh.cpu().numpy())
-            test_list = result.boxes.cls.cpu().numpy().tolist()
+            test_list = result.boxes.cls.cpu().numpy()
+            indices = np.where(test_list != 12)[0]
+            test_list = test_list[indices]
+            bxs = np.int64(result.boxes.xywh.cpu().numpy())[indices]
 
             # Drawing the boxes to mark the signal pads on the image
             self.exporter.mark_signal_pads(markings_vis, bxs, image_path, DPI)
@@ -147,10 +149,10 @@ class Detector:
 
         # Getting the inner and outer circles
         factor = DPI // 600
-        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=97, param2=58,
+        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=60, param2=44,
                                                   minRadius=int(46.875 * factor), maxRadius=int(62 * factor)))
-        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.3, minDist=600, param1=30, param2=44,
-                                                  minRadius=int(18.75 * factor), maxRadius=int(29 * factor)))
+        inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.3, minDist=600, param1=35, param2=37,
+                                                  minRadius=int(18.75 * factor), maxRadius=int(30 * factor)))
 
         # Drawing the inner and outer circles
         self.exporter.mark_circles(img, factor, outer_circles, center_radius=1, thickness=1, color=color1)

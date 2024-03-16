@@ -528,13 +528,14 @@ class AppGUI(tk.Tk):
         extractor = Extracter(exporter)
         detector = Detector(exporter, model_path, conf)
 
-        # Getting DPI for the image from exif
-        exif = {
-            ExifTags.TAGS[k]: v
-            for k, v in img._getexif().items()
-            if k in ExifTags.TAGS
-        }
-        DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
+        # # Getting DPI for the image from exif
+        # exif = {
+        #     ExifTags.TAGS[k]: v
+        #     for k, v in img._getexif().items()
+        #     if k in ExifTags.TAGS
+        # }
+        # DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
+        DPI=3200
         print(f"Image DPI: {DPI}")
         
         img = np.array(img)
