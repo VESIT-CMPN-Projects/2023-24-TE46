@@ -2,8 +2,11 @@
 import os
 import tkinter as tk
 from tkinter import filedialog
+from ttkbootstrap.toast import ToastNotification
 from threading import Thread
+import tkthread
 
+import cv2
 import numpy as np
 from PIL import Image, ImageTk, ExifTags
 
@@ -27,9 +30,10 @@ class AppGUI(tk.Tk):
 
         # Setting data and parameters
         self.retimer = RepeatedTimer(1, lambda: self.display('next'))
-        self.crop = False
-        self.rotate = False
         self.orientation = False  # horizontal
+        self.applied_rotation = 0
+        self.ext_end_toast = ToastNotification("Popup", "Stephole extraction has finished!")
+        self.det_end_toast = ToastNotification("Popup", "Detection has finished!")
 
         # Setting default folders and values
         self.resources = rel1
@@ -138,12 +142,8 @@ class AppGUI(tk.Tk):
         self.button(master=self.frame_im_controls, text="Output Path", shape=(25, 25), function=self.get_output_dir,
                      btn_list=self.dir_setters, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
 
-        # Button that allows cropping of images
-        self.button(master=self.frame_im_controls, text="Crop", shape=(25, 25), function=self.toggle_crop,
-                    btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
-
         # Button that allows rotation of images
-        self.button(master=self.frame_im_controls, text="Rotate", shape=(25, 25), function=self.toggle_rotation,
+        self.button(master=self.frame_im_controls, text="Rotate 90", shape=(25, 25), function=self.toggle_rotation,
                     btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
 
         # Button that allows selecting orientation of images
@@ -299,6 +299,10 @@ class AppGUI(tk.Tk):
         self.lbl_image["width"] = 340
         self.lbl_image["height"] = 468
 
+        # Pausing the im_show and resetting the starting hole_number
+        self.pause_imshow()
+        self.hole_number = 0
+
 
     def update_resources(self):
         """ Function to update the dropdown options in stage1 """
@@ -359,23 +363,14 @@ class AppGUI(tk.Tk):
             self.update_stage()
 
     ################################# Toggles #################################
-
-    def toggle_crop(self):
-        """ Function to toggle the cropping of the image """
-
-        self.crop = not self.crop
-        self.toggles[-3]['bg'] = 'black' if self.crop else 'white'
-        self.toggles[-3]['fg'] = 'white' if self.crop else 'black'
-        print("Crop: ", self.crop, self.toggles[-1]['bg'])
-
-
+            
     def toggle_rotation(self):
-        """ Function to toggle the rotation of the image """
+        """ Function to toggle the rotation of the image by -90deg """
 
-        self.rotate = not self.rotate
-        self.toggles[-2].configure(bg='black' if self.rotate else 'white')
-        self.toggles[-2].configure(fg='white' if self.rotate else 'black')
-        print("Rotation: ", self.rotate, self.toggles[-1]['bg'])
+        self.applied_rotation = (self.applied_rotation + 90) % 360
+        self.main_im = Image.fromarray(cv2.rotate(np.array(self.main_im), cv2.ROTATE_90_CLOCKWISE))
+        self.main_tk_im = ImageTk.PhotoImage(image=self.main_im)
+        self.lbl_image["image"] = self.main_tk_im
 
 
     def toggle_orientation(self):
@@ -384,7 +379,6 @@ class AppGUI(tk.Tk):
         self.orientation = not self.orientation
         self.toggles[-1].configure(bg='black' if self.orientation else 'white')
         self.toggles[-1].configure(fg='white' if self.orientation else 'black')
-        print("Orientation: ", self.orientation, self.toggles[-1]['bg'])
 
     ################################# Display Function #################################
 
@@ -414,6 +408,15 @@ class AppGUI(tk.Tk):
             self.update_img()
         except Exception as err:
             print(err)
+
+    
+    def show_toast_message(self, msg_num):
+        """Function to show the toast messages"""
+
+        if msg_num == 1:
+            self.ext_end_toast.show_toast()
+        else:
+            self.det_end_toast.show_toast()
 
     ################################# Component Function #################################
 
@@ -476,6 +479,7 @@ class AppGUI(tk.Tk):
 
     def get_resource_dir(self):
         """Function to get the resource directory"""
+        self.temp_path = self.resources
         try:
             self.resources = filedialog.askdirectory()
             self.update_resources()
@@ -485,6 +489,7 @@ class AppGUI(tk.Tk):
 
     def get_output_dir(self):
         """Function to get the output directory"""
+        self.temp_path = self.outs
         try:
             self.outs = filedialog.askdirectory()
         except Exception as err:
@@ -503,7 +508,7 @@ class AppGUI(tk.Tk):
         # Starting the processing of board in a separate thread
         thread = Thread(target=self.process_board, args=(
             self.resources, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path,
-            self.conf))
+            self.conf, self.applied_rotation))
         thread.daemon = True
         thread.start()
 
@@ -519,6 +524,7 @@ class AppGUI(tk.Tk):
         paths = args[3]
         model_path = os.path.relpath(args[4])
         conf = args[5]
+        rotation = args[6]
 
         # Importing the image
         img = Image.open(os.path.join(os.path.abspath(os.path.relpath(resources)), im_path))
@@ -535,7 +541,7 @@ class AppGUI(tk.Tk):
         #     if k in ExifTags.TAGS
         # }
         # DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
-        DPI=3200
+        DPI=1200
         print(f"Image DPI: {DPI}")
         
         img = np.array(img)
@@ -543,13 +549,13 @@ class AppGUI(tk.Tk):
         # Converting img from being rgb to bgr
         img = np.flip(img, axis=-1)
 
-        # Cropping the image if set to true
-        if self.crop:
-            img = self.preprocessor.focus_board(img, DPI)
-
-        # Rotating the image if set to true
-        if self.rotate:
-            img = self.preprocessor.rotate_image(img, DPI)
+        # Adjusting rotation for the main image
+        if rotation == 90:
+            img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        elif rotation == 180:
+            img = cv2.rotate(img, cv2.ROTATE_180)
+        elif rotation == 270:
+            img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         # Using vertical detection for the image orientation is set to true
         if self.orientation:
@@ -561,13 +567,15 @@ class AppGUI(tk.Tk):
         _ = exporter.annotate_holes(img, holes, DPI)
         extractor.extract_holes(img, holes, DPI, path=paths[0])
 
-        # Updatingg the names and img to update GUI in stages other than stage1
+        # Updating the names and img to update GUI in stages other than stage1
         if self.stage == 2 or self.stage == 3:
+            tkthread.call_nosync(lambda: self.show_toast_message(1))
             self.update_names()
             self.update_img()
 
         # getting the detection results for signal pads from detector
         detection_results, data_offset = detector.start_detections(DPI)
+        tkthread.call_nosync(lambda: self.show_toast_message(2))
 
         # exporting the offsets.csv
         data_offset_full, _ = exporter.export_offsets(data_offset, holes, DPI)
@@ -577,12 +585,6 @@ class AppGUI(tk.Tk):
 
         # exporting the strips.xlsx
         exporter.json_to_excel()
-
-        # with open("holes.json", mode='w') as out_file:
-        #     holes_new = []
-        #     for hole in holes:
-        #         holes_new.append(list(hole))
-        #     out_file.write(json.dumps(holes_new))
 
         # exporting the area.csv
         extractor.get_area(detection_results, DPI)

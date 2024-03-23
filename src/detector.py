@@ -67,7 +67,7 @@ class Detector:
                                  interpolation=cv2.INTER_AREA)
 
         # Getting the window for detecting the bottommost hole and applying CHT to get the circles
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 600: resized_img.shape[0] - 300, :],
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 1000: resized_img.shape[0] - 300, :],
                               cv2.COLOR_BGR2GRAY)
         circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=32, minRadius=22,
                                    maxRadius=30)
@@ -81,7 +81,7 @@ class Detector:
 
         # Setting bottommost hole as the reference point
         # Using the window's start row to obtain the Y-coordinate of hole in entire image
-        ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 600) * factor]
+        ref_point = [holes[0][0] * factor, (holes[0][1] + resized_img.shape[0] - 1000) * factor]
 
         # Shifting the real coords for considering hole1 as reference point or (0, 0)
         shifted_x = real_y - real_y[0]
