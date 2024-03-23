@@ -124,8 +124,10 @@ class AppGUI(tk.Tk):
                     function=self.pause_imshow, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
 
         # Spinner that helps control the speed of the slideshow
+        self.current_value = tk.IntVar()
+        self.current_value.trace_add(mode="write", callback=self.set_speed)
         self.spn_speed = tk.Spinbox(
-            master=self.frame_im_controls, from_=1, to=4, command=self.set_speed
+            master=self.frame_im_controls, from_=1, to=4, textvariable=self.current_value
         )
 
         # Getting all the images for hole extraction -- creating dropdown list
@@ -155,6 +157,7 @@ class AppGUI(tk.Tk):
         ########################## FIRST DISPLAY ##########################
 
         self.display()
+
 
     ################################# Update Functions #################################
         
@@ -257,17 +260,14 @@ class AppGUI(tk.Tk):
         self.relpath = os.path.abspath(os.path.relpath(self.outs))
         self.paths = [os.path.join(self.relpath, im_path.split('.')[0]),
                     os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
-        print(self.paths)
 
         # Checking for existence of cropped holes
         cropped_holes_check = os.path.exists(self.paths[0])
         cropped_holes_count = len(os.listdir(self.paths[0])) if cropped_holes_check else 0
-        print(cropped_holes_check)
 
         # Checking for existence of processed holes
         processed_holes_check = os.path.exists(self.paths[1])
         processed_holes_count = len(os.listdir(self.paths[1])) if processed_holes_check else 0
-        print(processed_holes_check)
 
         if cropped_holes_count == 92 and processed_holes_count == 92:
             # Displaying dialog box if all the cropped holes and processed holes are present
@@ -322,18 +322,20 @@ class AppGUI(tk.Tk):
             self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *options)
             self.dropdown.grid(row=0, column=1)
 
+
     ################################# Control Functions #################################
 
-    def set_speed(self):
+    def set_speed(self, *args):
         """ Function to set the speed for image playback """
 
-        self.retimer.speed = int(self.spn_speed.get())
+        if self.current_value.get() != "":
+            self.retimer.speed = int(self.current_value.get())
 
 
     def play_imshow(self):
         """ Function to start the image playback """
 
-        self.speed = int(self.spn_speed.get())
+        self.speed = int(self.current_value.get())
         self.retimer.start()
 
 
@@ -342,7 +344,7 @@ class AppGUI(tk.Tk):
 
         self.retimer.stop()
         self.retimer = RepeatedTimer(
-            int(self.spn_speed.get()), lambda: self.display('next'))
+            int(self.current_value.get()), lambda: self.display('next'))
 
 
     def next_stage(self):
@@ -362,6 +364,7 @@ class AppGUI(tk.Tk):
             self.stage -= 1
             self.update_stage()
 
+
     ################################# Toggles #################################
             
     def toggle_rotation(self):
@@ -379,6 +382,7 @@ class AppGUI(tk.Tk):
         self.orientation = not self.orientation
         self.toggles[-1].configure(bg='black' if self.orientation else 'white')
         self.toggles[-1].configure(fg='white' if self.orientation else 'black')
+
 
     ################################# Display Function #################################
 
@@ -417,6 +421,7 @@ class AppGUI(tk.Tk):
             self.ext_end_toast.show_toast()
         else:
             self.det_end_toast.show_toast()
+
 
     ################################# Component Function #################################
 
@@ -484,6 +489,7 @@ class AppGUI(tk.Tk):
             self.resources = filedialog.askdirectory()
             self.update_resources()
         except Exception as err:
+            self.resources = self.temp_path
             print(err)
 
 
@@ -493,6 +499,7 @@ class AppGUI(tk.Tk):
         try:
             self.outs = filedialog.askdirectory()
         except Exception as err:
+            self.resources = self.temp_path
             print(err)
 
 
@@ -503,13 +510,12 @@ class AppGUI(tk.Tk):
 
         # Getting the name for the image selected for processing
         im_path = self.main_im_path.get()
-        print(im_path)
 
         # Starting the processing of board in a separate thread
         thread = Thread(target=self.process_board, args=(
             self.resources, im_path, self.outs, [im_path.split('.')[0], im_path.split('.')[0] + '--S'], self.model_path,
             self.conf, self.applied_rotation))
-        thread.daemon = True
+        thread.setDaemon(True)
         thread.start()
 
 
