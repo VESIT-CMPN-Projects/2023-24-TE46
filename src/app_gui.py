@@ -30,10 +30,9 @@ class AppGUI(tk.Tk):
 
         # Setting data and parameters
         self.retimer = RepeatedTimer(1, lambda: self.display('next'))
+        self.crop = False
+        self.rotate = False
         self.orientation = False  # horizontal
-        self.applied_rotation = 0
-        self.ext_end_toast = ToastNotification("Popup", "Stephole extraction has finished!")
-        self.det_end_toast = ToastNotification("Popup", "Detection has finished!")
 
         # Setting default folders and values
         self.resources = rel1
@@ -74,7 +73,7 @@ class AppGUI(tk.Tk):
         self.frame_im_controls = tk.Frame(
             master=self.main_frame, relief=tk.RIDGE, borderwidth=3
         )
-        self.frame_im_controls.grid(row=2, column=0)
+        self.frame_im_controls.grid(row=1, column=1)
 
         ########################## GUI LABELS ##########################
 
@@ -90,6 +89,32 @@ class AppGUI(tk.Tk):
             padx=10, pady=6, width=340, height=468
         )
         self.lbl_image.grid(row=1)
+
+        # Label for selecting image via dropdown
+        self.lbl_select_img = tk.Label(
+            master=self.frame_im_controls, text="Select Image", padx=5, pady=3.5
+        )
+        self.lbl_select_img.grid(row=0, column=0)
+
+        # Label for orientation radio button
+        self.lbl_orient = tk.Label(
+            master=self.frame_im_controls, text="Orientation", padx=5, pady=3.5
+        )
+        self.lbl_orient.grid(row=1, column=0)
+
+        # Label for browing resource path radio button
+        self.lbl_resource = tk.Label(
+            master=self.frame_im_controls, text="Resource Path", padx=5, pady=3.5
+        )
+        self.lbl_resource.grid(row=2, column=0)
+        
+        # Label for browing output path radio button
+        self.lbl_out = tk.Label(
+            master=self.frame_im_controls, text="Output Path",  padx=5, pady=3.5
+        )
+        self.lbl_out.grid(row=3, column=0)
+        
+        self.lbl_list = [self.lbl_select_img, self.lbl_orient, self.lbl_resource, self.lbl_out]
 
         ########################## STAGE CONTROLS ##########################
 
@@ -122,35 +147,63 @@ class AppGUI(tk.Tk):
         # Button that pauses the slideshow
         self.button(master=self.frame_im_controls, im_path=btn_image_paths[3], shape=(25, 25),
                     function=self.pause_imshow, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+        
+        ########################## VARIABLES ##########################
+
+        # Variables for the Radio Button
+        self.current_value = tk.IntVar(value=1)
+        self.current_value.trace_add(mode="write", callback=self.set_speed)
+        self.orient_var = tk.StringVar(self.frame_im_controls, value="vertical")
+
+        # Variables for Browsing Paths
+        self.var_resources = tk.StringVar(self.frame_im_controls, value="./" + str(self.resources) + '/')
+        self.var_outs = tk.StringVar(self.frame_im_controls, value="./" + str(self.outs) + '/')
+        self.var_main_img_path = tk.StringVar(self.frame_images)
+
+        ########################## OTHER CONTROLS ##########################
 
         # Spinner that helps control the speed of the slideshow
-        self.current_value = tk.IntVar()
-        self.current_value.trace_add(mode="write", callback=self.set_speed)
         self.spn_speed = tk.Spinbox(
             master=self.frame_im_controls, from_=1, to=4, textvariable=self.current_value
         )
 
-        # Getting all the images for hole extraction -- creating dropdown list
-        self.dropdown = None
-        self.main_im_path = tk.StringVar(self.frame_images)
-        self.main_im_path.trace_add("write", self.update_img)
-        self.update_resources()
+        # Radio buttons for Orientation
+        self.rb_orient_vertical = tk.Radiobutton(master=self.frame_im_controls, text="Vertical", variable=self.orient_var, 
+                       value="vertical", command=self.update_orientation)
+        self.rb_orient_vertical.grid(row=1, column=1, sticky="W")
 
+        self.rb_orient_horizontal = tk.Radiobutton(master=self.frame_im_controls, text="Horizontal", variable=self.orient_var, 
+                       value="horizontal", command=self.update_orientation)
+        self.rb_orient_horizontal.grid(row=1, column=2, sticky="W")
+
+        # Resource path Entry Field
+        self.entry_resources = tk.Entry(master=self.frame_im_controls, textvariable=self.var_resources, width=25)
+        self.entry_resources.grid(row=2, column=1,sticky="W")
+
+        # Output path Entry Field
+        self.entry_outs = tk.Entry(master=self.frame_im_controls, textvariable=self.var_outs, width=25)
+        self.entry_outs.grid(row=3, column=1, sticky="W")
+        
+        self.entry_list = [self.entry_resources, self.entry_outs]
+
+        self.dir_setters = []
+        
+        # Button that allows rotation of image by 90
+        self.button(master=self.frame_im_controls, text="Rotate by 90°", row=0, col=3, shape=(25, 25), function=self.toggle_rotation,
+                     btn_list=self.dir_setters, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+        
         # Button that allows browsing the filesystem for images
-        self.button(master=self.frame_im_controls, text="Resource Path", shape=(25, 25), function=self.get_resource_dir,
+        self.button(master=self.frame_im_controls, text="Browse", row=4, col=3, shape=(25, 25), function=self.get_resource_dir,
                      btn_list=self.dir_setters, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
         
         # Button that allows browsing the output folder for images
-        self.button(master=self.frame_im_controls, text="Output Path", shape=(25, 25), function=self.get_output_dir,
+        self.button(master=self.frame_im_controls, text="Browse", row=5, col=3, shape=(25, 25), function=self.get_output_dir,
                      btn_list=self.dir_setters, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
 
-        # Button that allows rotation of images
-        self.button(master=self.frame_im_controls, text="Rotate 90", shape=(25, 25), function=self.toggle_rotation,
-                    btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
-
-        # Button that allows selecting orientation of images
-        self.button(master=self.frame_im_controls, text="Vertical", shape=(25, 25), function=self.toggle_orientation,
-                    btn_list=self.toggles, relief=tk.GROOVE, borderwidth=2, padx=5, pady=3.5)
+        # Getting all the images for hole extraction -- creating dropdown list
+        self.dropdown = None
+        self.var_main_img_path.trace_add("write", self.update_img)
+        self.update_resources()
 
         self.update_controls()
 
@@ -196,7 +249,7 @@ class AppGUI(tk.Tk):
                 os.mkdir(os.path.abspath(os.path.relpath(".thumbnails")))
             
             # Paths to the Original Image and it's Thumbnail
-            im_path = self.main_im_path.get()
+            im_path = self.var_main_img_path.get()
             abs_path = os.path.join(os.path.abspath(os.path.relpath(self.resources)), im_path)
             thumbnail_path = os.path.join(os.path.abspath(os.path.relpath(".thumbnails")), im_path)
 
@@ -236,6 +289,33 @@ class AppGUI(tk.Tk):
             self.img_tk = ImageTk.PhotoImage(image=self.img)
             self.lbl_image['image'] = self.img_tk
 
+    
+    def update_orientation(self):
+            """Update the orientation boolean as per user's choice"""
+
+            self.orientation = self.orient_var.get() == "horizontal"
+
+
+    def update_resources(self):
+            """ Function to update the dropdown options in stage1 """
+
+            # Getting the options for the dropdown
+            options = np.array(os.listdir(os.path.abspath(os.path.relpath(self.resources))))
+            options = [option for option in options if (option.endswith('.jpg') or option.endswith('.png') or option.endswith('.jpeg')) and option != 'default.png']
+
+            if len(options) != 0:
+                self.var_main_img_path.set(options[0])
+
+                # Options for the images to pick from
+                if self.dropdown != None:
+                    self.dropdown.destroy()
+                    self.display()
+
+                self.dropdown = tk.OptionMenu(self.frame_im_controls, self.var_main_img_path, *options)
+                self.dropdown.grid(row=0, column=1)
+
+
+    ################################# Change Stage Functions #################################
 
     def from_stage1(self):
         """ Function to update the controls of the ML app while going from stage 1 to stage 2 """
@@ -245,9 +325,12 @@ class AppGUI(tk.Tk):
 
         # Forgetting the stage 1 controls
         self.dropdown.grid_forget()
-        [btn.grid_forget() for btn in (self.toggles + self.dir_setters)]
+        grid_widgets = self.frame_im_controls.grid_slaves()
+        for widget in grid_widgets:
+            widget.grid_forget()
 
         # Placing the stage 2 controls
+        self.frame_im_controls.grid(row=2, column=0)
         self.spn_speed.grid(row=0, column=1)
         [btn.grid(row=0, column=index if index == 0 else index + 1) for (index, btn) in enumerate(self.imc_btns)]
 
@@ -256,7 +339,7 @@ class AppGUI(tk.Tk):
         self.lbl_image["height"] = 400
 
         # Setting the paths for output
-        im_path = self.main_im_path.get()
+        im_path = self.var_main_img_path.get()
         self.relpath = os.path.abspath(os.path.relpath(self.outs))
         self.paths = [os.path.join(self.relpath, im_path.split('.')[0]),
                     os.path.join(self.relpath, im_path.split('.')[0] + '--S')]
@@ -292,8 +375,13 @@ class AppGUI(tk.Tk):
         [btn.grid_forget() for btn in self.imc_btns]
 
         # Placing the stage1 controls
+        self.frame_im_controls.grid(row=1, column=1)
         self.dropdown.grid(row=0, column=1)
-        [btn.grid(row=0, column=index + 2) for (index, btn) in enumerate((self.toggles + self.dir_setters))]
+        [btn.grid(row=index + 1 if index != 0 else 0, column=2) for (index, btn) in enumerate(self.dir_setters)]
+        [label.grid(row=index, column=0) for (index, label) in enumerate(self.lbl_list)]
+        self.rb_orient_vertical.grid(row=1, column=1)
+        self.rb_orient_horizontal.grid(row=1, column=2)
+        [entry.grid(row=2 + index, column=1) for (index, entry) in enumerate(self.entry_list)]
 
         # Adjusting image size for stage1
         self.lbl_image["width"] = 340
@@ -304,32 +392,16 @@ class AppGUI(tk.Tk):
         self.hole_number = 0
 
 
-    def update_resources(self):
-        """ Function to update the dropdown options in stage1 """
-
-        # Getting the options for the dropdown
-        options = np.array(os.listdir(os.path.abspath(os.path.relpath(self.resources))))
-        options = [option for option in options if (option.endswith('.jpg') or option.endswith('.png') or option.endswith('.jpeg')) and option != 'default.png']
-
-        if len(options) != 0:
-            self.main_im_path.set(options[0])
-
-            # Options for the images to pick from
-            if self.dropdown != None:
-                self.dropdown.destroy()
-                self.display()
-
-            self.dropdown = tk.OptionMenu(self.frame_im_controls, self.main_im_path, *options)
-            self.dropdown.grid(row=0, column=1)
-
-
     ################################# Control Functions #################################
 
     def set_speed(self, *args):
         """ Function to set the speed for image playback """
 
-        if self.current_value.get() != "":
-            self.retimer.speed = int(self.current_value.get())
+        try:
+            if self.current_value.get() != "":
+                self.retimer.speed = int(self.current_value.get())
+        except:
+            pass
 
 
     def play_imshow(self):
@@ -365,25 +437,6 @@ class AppGUI(tk.Tk):
             self.update_stage()
 
 
-    ################################# Toggles #################################
-            
-    def toggle_rotation(self):
-        """ Function to toggle the rotation of the image by -90deg """
-
-        self.applied_rotation = (self.applied_rotation + 90) % 360
-        self.main_im = Image.fromarray(cv2.rotate(np.array(self.main_im), cv2.ROTATE_90_CLOCKWISE))
-        self.main_tk_im = ImageTk.PhotoImage(image=self.main_im)
-        self.lbl_image["image"] = self.main_tk_im
-
-
-    def toggle_orientation(self):
-        """ Function to toggle the orientation of the image """
-
-        self.orientation = not self.orientation
-        self.toggles[-1].configure(bg='black' if self.orientation else 'white')
-        self.toggles[-1].configure(fg='white' if self.orientation else 'black')
-
-
     ################################# Display Function #################################
 
     def display(self, direction='current'):
@@ -412,8 +465,24 @@ class AppGUI(tk.Tk):
             self.update_img()
         except Exception as err:
             print(err)
-
     
+    
+    def display_dialog_box(self, callback):
+        """Function to display a top-level consent requesting dialog box"""
+
+        ## HELPER FUNCTIONS ##
+        def process():
+            callback()
+            win.destroy()
+
+        # Setting the GUI for the dialog box
+        win = tk.Toplevel(height=300, width=100)
+        win.title('Confirmation')
+        tk.Label(win, text="Do you want to run the model?").grid(row=0, column=0, columnspan=2, padx=10, pady=5)
+        tk.Button(win, text='Run', command=process).grid(row=1, column=0,  padx=10, pady=5)
+        tk.Button(win, text='Cancel', command=win.destroy).grid(row=1, column=1,  padx=10, pady=5)
+    
+
     def show_toast_message(self, msg_num):
         """Function to show the toast messages"""
 
@@ -466,42 +535,44 @@ class AppGUI(tk.Tk):
             print(err)
 
 
-    def display_dialog_box(self, callback):
-        """Function to display a top-level consent requesting dialog box"""
+    ################################# Toggles #################################
 
-        ## HELPER FUNCTIONS ##
-        def process():
-            callback()
-            win.destroy()
+    def toggle_rotation(self):
+        """ Function to toggle the rotation of the image by -90deg """
 
-        # Setting the GUI for the dialog box
-        win = tk.Toplevel(height=300, width=100)
-        win.title('Confirmation')
-        tk.Label(win, text="Do you want to run the model?").grid(row=0, column=0, columnspan=2, padx=10, pady=5)
-        tk.Button(win, text='Run', command=process).grid(row=1, column=0,  padx=10, pady=5)
-        tk.Button(win, text='Cancel', command=win.destroy).grid(row=1, column=1,  padx=10, pady=5)
+        self.applied_rotation = (self.applied_rotation + 90) % 360
+        self.main_im = Image.fromarray(cv2.rotate(np.array(self.main_im), cv2.ROTATE_90_CLOCKWISE))
+        self.main_tk_im = ImageTk.PhotoImage(image=self.main_im)
+        self.lbl_image["image"] = self.main_tk_im
 
+
+    ################################# Path Function #################################
 
     def get_resource_dir(self):
         """Function to get the resource directory"""
-        self.temp_path = self.resources
+
+        temp_path = self.resources
         try:
-            self.resources = filedialog.askdirectory()
+            self.resources = filedialog.askdirectory(initialdir=self.var_resources.get())
             self.update_resources()
         except Exception as err:
-            self.resources = self.temp_path
+            self.resources = temp_path
             print(err)
+        
+        self.var_resources.set(self.resources)
 
 
     def get_output_dir(self):
         """Function to get the output directory"""
-        self.temp_path = self.outs
+
+        temp_path = self.outs
         try:
-            self.outs = filedialog.askdirectory()
+            self.outs = filedialog.askdirectory(initialdir=self.var_outs.get())
         except Exception as err:
-            self.resources = self.temp_path
+            self.outs = temp_path
             print(err)
 
+        self.var_outs.set(self.outs)
 
     ################################# ML Call Function #################################
         
@@ -509,7 +580,7 @@ class AppGUI(tk.Tk):
         """Function to start processing of the board"""
 
         # Getting the name for the image selected for processing
-        im_path = self.main_im_path.get()
+        im_path = self.var_main_img_path.get()
 
         # Starting the processing of board in a separate thread
         thread = Thread(target=self.process_board, args=(
@@ -547,7 +618,7 @@ class AppGUI(tk.Tk):
         #     if k in ExifTags.TAGS
         # }
         # DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
-        DPI=1200
+        DPI=3200
         print(f"Image DPI: {DPI}")
         
         img = np.array(img)
