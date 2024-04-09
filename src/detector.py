@@ -67,7 +67,7 @@ class Detector:
                                  interpolation=cv2.INTER_AREA)
 
         # Getting the window for detecting the bottommost hole and applying CHT to get the circles
-        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 1000: resized_img.shape[0] - 300, :],
+        window = cv2.cvtColor(resized_img[resized_img.shape[0] - 1000: resized_img.shape[0] - 500, :],
                               cv2.COLOR_BGR2GRAY)
         circles = cv2.HoughCircles(window, cv2.HOUGH_GRADIENT, 0.8, minDist=100, param1=11, param2=32, minRadius=22,
                                    maxRadius=30)
@@ -149,23 +149,26 @@ class Detector:
 
         # Getting the inner and outer circles
         factor = DPI // 600
-        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=60, param2=44,
+        outer_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.1, minDist=600, param1=60, param2=43,
                                                   minRadius=int(46.875 * factor), maxRadius=int(62 * factor)))
         inner_circles = np.array(cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 0.3, minDist=600, param1=35, param2=37,
                                                   minRadius=int(18.75 * factor), maxRadius=int(30 * factor)))
 
-        # Drawing the inner and outer circles
-        self.exporter.mark_circles(img, factor, outer_circles, center_radius=1, thickness=1, color=color1)
-        self.exporter.mark_circles(img, factor, inner_circles, center_radius=1, thickness=1, color=color2)
+        if outer_circles.ndim != 0 and inner_circles.ndim != 0:
+            # Drawing the inner and outer circles
+            self.exporter.mark_circles(img, factor, outer_circles, center_radius=1, thickness=1, color=color1)
+            self.exporter.mark_circles(img, factor, inner_circles, center_radius=1, thickness=1, color=color2)
 
-        # Writing the offset to the bottom white strip of images
-        self.exporter.write(img,
-                            f"Offset = {np.round(np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI, 3)}um",
-                            factor, x_mul=75)
+            # Writing the offset to the bottom white strip of images
+            self.exporter.write(img,
+                                f"Offset = {np.round(np.sqrt(np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power((outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI, 3)}um",
+                                factor, x_mul=75)
 
-        # Returning the offset value in pixels and micrometers
-        return (outer_circles[0][0], inner_circles[0][0], np.sqrt(
-            np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(
-                (outer_circles[0][0][1] - inner_circles[0][0][1]), 2)), np.sqrt(
-            np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(
-                (outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI)
+            # Returning the offset value in pixels and micrometers
+            return (outer_circles[0][0], inner_circles[0][0], np.sqrt(
+                np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(
+                    (outer_circles[0][0][1] - inner_circles[0][0][1]), 2)), np.sqrt(
+                np.power((outer_circles[0][0][0] - inner_circles[0][0][0]), 2) + np.power(
+                    (outer_circles[0][0][1] - inner_circles[0][0][1]), 2)) * 25400 / DPI)
+
+        return [np.nan] * 4

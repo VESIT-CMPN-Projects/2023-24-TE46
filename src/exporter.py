@@ -92,12 +92,13 @@ class Exporter:
         out.release()
 
 
-    def mark_circles(self, img, factor, circles, /, center_radius=1, thickness=1, color=(255, 0, 255)):
+    def mark_circles(self, img, factor, circles_array, /, center_radius=1, thickness=1, color=(255, 0, 255)):
         """Function to annotate circles with center to the image with no return"""
 
-        for circle in circles[0]:
-            cv2.circle(img, (int(circle[0]), int(circle[1])), int(center_radius * factor), thickness=-1, color=color)
-            cv2.circle(img, (int(circle[0]), int(circle[1])), int(circle[2]), thickness=thickness * factor, color=color)
+        for circles in circles_array:
+            for circle in circles:
+                cv2.circle(img, (int(circle[0]), int(circle[1])), int(center_radius * factor), thickness=-1, color=color)
+                cv2.circle(img, (int(circle[0]), int(circle[1])), int(circle[2]), thickness=thickness * factor, color=color)
 
 
     def mark_signal_pads(self, img, boxes, image_path, DPI, /, thickness=1):
@@ -145,12 +146,17 @@ class Exporter:
         
     
     def save_excel(self, data, filename, /, sheetname="Offsets"):
-        """Function to convert dictionary and write JSON object to JSONFile"""
+        """Function to convert data into a dataframe and writing it to an excel sheet"""
 
         try:
-            dataframe = pd.DataFrame(data)
+            data_frames = []
+            for data_obj in data:
+                data_frames.append(pd.DataFrame(data_obj))
+                data_frames[-1].loc[len(data_frames[-1])] = pd.Series(dtype='object')
+            data_frame = pd.concat(data_frames, ignore_index=True, axis=0)
+            
             with pd.ExcelWriter(os.path.join(self.outs, filename if filename.endswith(".xlsx") else filename + ".xlsx")) as writer:
-                dataframe.to_excel(writer, sheet_name=sheetname)  
+                data_frame.to_excel(writer, sheet_name=sheetname)  
             return True
         except Exception as err:
             print(err)
@@ -163,13 +169,15 @@ class Exporter:
         with open(os.path.join(self.outs, "strips.json"), mode='r') as file:
             data = json.load(file)
 
-        strip_dataframe = pd.DataFrame()
-        for strip_dict in data:
-            strip_dataframe.combine(pd.DataFrame(strip_dict), pd.concat)
-            strip_dataframe.combine(pd.DataFrame([" " for _ in range(len(data[0].keys()))]), pd.concat)
+        return self.save_excel(data, filename)
+        # data_frames = []
+        # for data_obj in data:
+        #     data_frames.append(pd.DataFrame(data_obj))
+        #     data_frames[-1].loc[len(data_frames[-1])] = pd.Series(dtype='object')
+        # data_frame = pd.concat(data_frames, ignore_index=True, axis=0)
 
-        with pd.ExcelWriter(os.path.join(self.outs, filename if filename.endswith(".xlsx") else filename + ".xlsx"), engine="xlsxwriter") as writer:
-            strip_dataframe.to_excel(writer, sheet_name=sheetname)
+        # with pd.ExcelWriter(os.path.join(self.outs, filename if filename.endswith(".xlsx") else filename + ".xlsx"), engine="xlsxwriter") as writer:
+        #     data_frame.to_excel(writer, sheet_name=sheetname)
 
 
     def export_offsets(self, data_offset, holes, DPI):

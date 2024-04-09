@@ -30,9 +30,8 @@ class AppGUI(tk.Tk):
 
         # Setting data and parameters
         self.retimer = RepeatedTimer(1, lambda: self.display('next'))
-        self.crop = False
-        self.rotate = False
-        self.orientation = False  # horizontal
+        self.applied_rotation = 0
+        self.orientation = True  # vertical
 
         # Setting default folders and values
         self.resources = rel1
@@ -94,25 +93,21 @@ class AppGUI(tk.Tk):
         self.lbl_select_img = tk.Label(
             master=self.frame_im_controls, text="Select Image", padx=5, pady=3.5
         )
-        self.lbl_select_img.grid(row=0, column=0)
 
         # Label for orientation radio button
         self.lbl_orient = tk.Label(
             master=self.frame_im_controls, text="Orientation", padx=5, pady=3.5
         )
-        self.lbl_orient.grid(row=1, column=0)
 
         # Label for browing resource path radio button
         self.lbl_resource = tk.Label(
             master=self.frame_im_controls, text="Resource Path", padx=5, pady=3.5
         )
-        self.lbl_resource.grid(row=2, column=0)
         
         # Label for browing output path radio button
         self.lbl_out = tk.Label(
             master=self.frame_im_controls, text="Output Path",  padx=5, pady=3.5
         )
-        self.lbl_out.grid(row=3, column=0)
         
         self.lbl_list = [self.lbl_select_img, self.lbl_orient, self.lbl_resource, self.lbl_out]
 
@@ -153,7 +148,7 @@ class AppGUI(tk.Tk):
         # Variables for the Radio Button
         self.current_value = tk.IntVar(value=1)
         self.current_value.trace_add(mode="write", callback=self.set_speed)
-        self.orient_var = tk.StringVar(self.frame_im_controls, value="vertical")
+        self.orient_var = tk.StringVar(self.frame_im_controls, value="horizontal")
 
         # Variables for Browsing Paths
         self.var_resources = tk.StringVar(self.frame_im_controls, value="./" + str(self.resources) + '/')
@@ -163,26 +158,20 @@ class AppGUI(tk.Tk):
         ########################## OTHER CONTROLS ##########################
 
         # Spinner that helps control the speed of the slideshow
-        self.spn_speed = tk.Spinbox(
-            master=self.frame_im_controls, from_=1, to=4, textvariable=self.current_value
-        )
+        self.spn_speed = tk.Entry(master=self.frame_im_controls, textvariable=self.current_value)
 
         # Radio buttons for Orientation
-        self.rb_orient_vertical = tk.Radiobutton(master=self.frame_im_controls, text="Vertical", variable=self.orient_var, 
-                       value="vertical", command=self.update_orientation)
-        self.rb_orient_vertical.grid(row=1, column=1, sticky="W")
-
         self.rb_orient_horizontal = tk.Radiobutton(master=self.frame_im_controls, text="Horizontal", variable=self.orient_var, 
                        value="horizontal", command=self.update_orientation)
-        self.rb_orient_horizontal.grid(row=1, column=2, sticky="W")
+
+        self.rb_orient_vertical = tk.Radiobutton(master=self.frame_im_controls, text="Vertical", variable=self.orient_var, 
+                       value="vertical", command=self.update_orientation)
 
         # Resource path Entry Field
         self.entry_resources = tk.Entry(master=self.frame_im_controls, textvariable=self.var_resources, width=25)
-        self.entry_resources.grid(row=2, column=1,sticky="W")
 
         # Output path Entry Field
         self.entry_outs = tk.Entry(master=self.frame_im_controls, textvariable=self.var_outs, width=25)
-        self.entry_outs.grid(row=3, column=1, sticky="W")
         
         self.entry_list = [self.entry_resources, self.entry_outs]
 
@@ -379,8 +368,8 @@ class AppGUI(tk.Tk):
         self.dropdown.grid(row=0, column=1)
         [btn.grid(row=index + 1 if index != 0 else 0, column=2) for (index, btn) in enumerate(self.dir_setters)]
         [label.grid(row=index, column=0) for (index, label) in enumerate(self.lbl_list)]
-        self.rb_orient_vertical.grid(row=1, column=1)
-        self.rb_orient_horizontal.grid(row=1, column=2)
+        self.rb_orient_horizontal.grid(row=1, column=1)
+        self.rb_orient_vertical.grid(row=1, column=2)
         [entry.grid(row=2 + index, column=1) for (index, entry) in enumerate(self.entry_list)]
 
         # Adjusting image size for stage1
@@ -618,7 +607,7 @@ class AppGUI(tk.Tk):
         #     if k in ExifTags.TAGS
         # }
         # DPI = int(exif['XResolution'])  # Take X Resolution as DPI. X resolution is generally lower than Y in scanners
-        DPI=3200
+        DPI=1200
         print(f"Image DPI: {DPI}")
         
         img = np.array(img)
@@ -635,7 +624,7 @@ class AppGUI(tk.Tk):
             img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         # Using vertical detection for the image orientation is set to true
-        if self.orientation:
+        if not self.orientation:
             holes = detector.get_holes_fv(img, DPI)
         else:
             holes = detector.get_holes(img, DPI)
